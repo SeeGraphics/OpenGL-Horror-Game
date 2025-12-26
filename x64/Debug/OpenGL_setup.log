@@ -1,3 +1,0 @@
-﻿  primitives.hpp
-LINK : warning LNK4098: Standardbibliothek "MSVCRT" steht in Konflikt mit anderen Bibliotheken; /NODEFAULTLIB:Bibliothek verwenden.
-  OpenGL_setup.vcxproj -> C:\Users\matteoheck\source\repos\OpenGL_setup\x64\Debug\OpenGL_setup.exe

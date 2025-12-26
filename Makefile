@@ -14,7 +14,7 @@ CFLAGS   = -Wall -I./include -I$(BREW_INC)
 LDFLAGS  = -L$(BREW_LIB) -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 
 # --- FILES ---
-TARGET   = $(BUILD_DIR)/opengl_cube
+TARGET   = $(BUILD_DIR)/game
 SRC_CPP  = src/main.cpp src/camera.cpp src/shader.cpp src/stb_image.cpp
 SRC_C    = src/glad.c
 

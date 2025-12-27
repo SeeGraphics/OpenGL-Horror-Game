@@ -43,22 +43,36 @@ void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
 
 void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
                              bool freeCam) {
+  glm::vec3 wishDir = glm::vec3(0.0f);
+  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) wishDir += flatFront;
+  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) wishDir -= flatFront;
+  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    wishDir -= glm::normalize(glm::cross(flatFront, cameraUp));
+  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    wishDir += glm::normalize(glm::cross(flatFront, cameraUp));
+
   // states and vars
   static bool cWasDown = false;
   static bool isSneaking = false;
-  float baseSpeed = 4.0f;
+  float baseSpeed = 3.0f;
 
-  // check current speed (for crouching & sprinting and later maybe stamina)
+  // Calculate base speed
   float currentSpeed = baseSpeed;
 
-  // speed up when sprinting
-  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-    if (freeCam)
-      currentSpeed = 30.0f;
-    else
-      currentSpeed = 6.5f;
+  // Sprinting Logic with "Human" constraints
+  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && !freeCam) {
+    // Only allow sprinting if moving generally FORWARD
+    // Dot product tells us if wishDir and flatFront point in the same direction
+    float movementDirectionMatch = glm::dot(wishDir, flatFront);
+
+    if (movementDirectionMatch > 0.5f) {  // Moving mostly forward
+      currentSpeed = 5.0f;
+    } else {
+      // Trying to sprint backwards or sideways? No boost for you.
+      currentSpeed = baseSpeed;
+    }
   }
-  // slow down when sneaking
+
   if (isSneaking && !freeCam) {
     currentSpeed = 1.5f;
   }
@@ -107,15 +121,6 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   } else {
     cWasDown = false;
   }
-
-  // Calculate the intended movement direction (Wish Direction)
-  glm::vec3 wishDir = glm::vec3(0.0f);
-  if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) wishDir += flatFront;
-  if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) wishDir -= flatFront;
-  if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-    wishDir -= glm::normalize(glm::cross(flatFront, cameraUp));
-  if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    wishDir += glm::normalize(glm::cross(flatFront, cameraUp));
 
   // Smooth Sneak Transition
   float targetHeight = isSneaking ? 1.0f : 1.5f;
@@ -168,12 +173,12 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   // Head Bob Logic
   float horizontalSpeed = glm::length(glm::vec2(velocity.x, velocity.z));
 
+  // Only increment the timer if we are grounded
   if (isGrounded && horizontalSpeed > 0.1f) {
-    // Increase timer based on how fast we are actually moving
     bobTimer += horizontalSpeed * deltaTime * bobbingSpeed;
-    visualBobOffset = sin(bobTimer) * bobbingAmount;  // Save it here
+    float targetBob = sin(bobTimer) * bobbingAmount;
+    visualBobOffset = glm::mix(visualBobOffset, targetBob, 15.0f * deltaTime);
   } else {
-    bobTimer = 0.0f;  // Reset when standing still
     visualBobOffset = glm::mix(visualBobOffset, 0.0f, 10.0f * deltaTime);
   }
 }

@@ -15,7 +15,8 @@ class Camera {
   glm::vec3 flatFront;    // for walking, avoids not moving when looking down
   glm::vec3 cameraUp;
 
-  glm::vec3 direction;
+  glm::vec3 direction;  // where is the player looking
+  glm::vec3 wishDir;    // which direction does the player WANT to move in
   float yaw;
   float pitch;
 
@@ -24,6 +25,12 @@ class Camera {
   float jumpforce;
   glm::vec3 velocity;
   bool isGrounded;
+
+  // bobbing
+  float bobbingAmount;
+  float bobbingSpeed;
+  float bobTimer;
+  float visualBobOffset;
 
   // for ungrabbing mouse with ´q´
   bool mouseDisabled;

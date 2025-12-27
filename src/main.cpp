@@ -33,6 +33,8 @@ float lastFrame = 0.0f;  // Time of last frame
 int floorsize = 100;
 float floorY = -1.0f;
 
+float renderDistance = 500.0f;
+
 // toggle vars
 bool fullscreen = true;
 bool wireframe = false;
@@ -164,9 +166,10 @@ int main() {
   // load image, create texture and generate mipmaps
   int width, height, nrChannels;
   unsigned char* data =
-      stbi_load("assets/container.jpg", &width, &height, &nrChannels, 0);
+      stbi_load("assets/grass.png", &width, &height, &nrChannels, 0);
   if (data) {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB,
+    GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
   } else {
@@ -191,25 +194,33 @@ int main() {
     // ------
 
     // imgui
-    // 1. Start ImGui Frame
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    ImGui::Begin("Performance");
-    ImGui::Text("FPS: %.1f", io.Framerate);
+    // 1. Window
+    ImGui::Begin("FPS");
+    ImGui::Text("%.f", io.Framerate);
     ImGui::End();
 
-    // opengl
+    // 2. Window
+    ImGui::Begin("Settings");
+    ImGui::Checkbox("Free Cam", &freeCam);
+    ImGui::Checkbox("Wireframe", &wireframe);
+    ImGui::PushItemWidth(50);
+    ImGui::SliderFloat("Render Distance", &renderDistance, 5.0f, 1000.0f);
+    ImGui::PopItemWidth();
+    ImGui::End();
+
+    // OPEN_GL
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // bind Texture
+    // Bind Texture
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    // matrices
-    // -----------
+    // Matrices
     // global space
     glm::mat4 model = glm::mat4(1.0f);
 
@@ -243,7 +254,7 @@ int main() {
 
     // Use the dynamic aspect ratio
     glm::mat4 projection =
-        glm::perspective(glm::radians(60.0f), aspect, 0.1f, 100.0f);
+        glm::perspective(glm::radians(60.0f), aspect, 0.1f, renderDistance);
 
     ourShader.use();
     int modelLoc = glGetUniformLocation(ourShader.ID, "model");
@@ -254,6 +265,7 @@ int main() {
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
     // render container
+    glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
     glBindVertexArray(VAO);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 36, modelMatrices.size());
 
@@ -317,7 +329,6 @@ void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
     if (!pWasDown) {
       wireframe = !wireframe;
-      glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
     }
     pWasDown = true;
   } else {
@@ -327,7 +338,9 @@ void processInput(GLFWwindow* window) {
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
   (void)window;
-  camera.ProcessMouse(xpos, ypos);
+  if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
+    camera.ProcessMouse(xpos, ypos);
+  }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback

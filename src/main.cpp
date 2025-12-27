@@ -36,6 +36,7 @@ float floorY = -1.0f;
 // toggle vars
 bool fullscreen = true;
 bool wireframe = false;
+bool freeCam = false;
 
 // camera
 // ---------
@@ -212,21 +213,22 @@ int main() {
     // global space
     glm::mat4 model = glm::mat4(1.0f);
 
-    // apply gravity & floor collision
+    // apply gravity & floor collision (unless freeCam is on)
+    if (!freeCam) {
+      if (!camera.isGrounded) {
+        camera.velocity.y += camera.GRAVITY * deltaTime;
+      }
 
-    if (!camera.isGrounded) {
-      camera.velocity.y += camera.GRAVITY * deltaTime;
-    }
+      camera.cameraPos += camera.velocity * deltaTime;
+      float floorLevel = floorY + camera.cameraHeight;
 
-    camera.cameraPos += camera.velocity * deltaTime;
-    float floorLevel = floorY + camera.cameraHeight;
-
-    if (camera.cameraPos.y <= floorLevel) {
-      camera.cameraPos.y = floorLevel;  // Snap to floor
-      camera.velocity.y = 0.0f;         // Stop falling
-      camera.isGrounded = true;
-    } else {
-      camera.isGrounded = false;
+      if (camera.cameraPos.y <= floorLevel) {
+        camera.cameraPos.y = floorLevel;  // Snap to floor
+        camera.velocity.y = 0.0f;         // Stop falling
+        camera.isGrounded = true;
+      } else {
+        camera.isGrounded = false;
+      }
     }
 
     // view matrix
@@ -280,12 +282,19 @@ int main() {
   return 0;
 }
 
-// process all input: query GLFW whether relevant keys are pressed/released this
-// frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
+  // toggle freeCam
+  static bool vWasDown = false;
+  if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+    if (!vWasDown) {
+      freeCam = !freeCam;  // Toggle only once per press
+    }
+    vWasDown = true;
+  } else {
+    vWasDown = false;
+  }
   if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
     if (!fullscreen) {
       // Switch to fullscreen
@@ -300,9 +309,11 @@ void processInput(GLFWwindow* window) {
       fullscreen = false;
     }
   }
-  camera.ProcessKeyboard(window, deltaTime);
+  // player/ camera controls from camera.cpp
+  camera.ProcessKeyboard(window, deltaTime, freeCam);
   static bool pWasDown = false;
 
+  // toggle Wireframe mode
   if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
     if (!pWasDown) {
       wireframe = !wireframe;

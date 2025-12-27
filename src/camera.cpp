@@ -17,7 +17,7 @@ Camera::Camera() {
 
   // gravity and physics vars
   GRAVITY = -9.81f;
-  jumpforce = 2.0f;
+  jumpforce = 5.0f;
   // float playerHeight = 2.0f;  // for collision
   velocity = glm::vec3(0.0f);
   isGrounded = false;
@@ -32,8 +32,11 @@ void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime) {
-  const float cameraSpeed = 4.0f * deltaTime;
+void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
+                             bool freeCam) {
+  float cameraSpeed = 4.0f * deltaTime;
+  float cameraSpeedSneak = 2.0f * deltaTime;
+  float cameraSpeedSprint = 6.0f * deltaTime;
   if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
     if (mouseDisabled) {
       glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -45,12 +48,21 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime) {
   }
 
   if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-    // cameraPos += cameraSpeed * cameraUp;
-    velocity.y = jumpforce;
-    isGrounded = false;
+    if (freeCam) {
+      cameraPos += cameraSpeed * cameraUp;
+    } else {
+      if (isGrounded) {
+        velocity.y = jumpforce;
+        isGrounded = false;
+      }
+    }
+  }
+  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
   }
   if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
-    cameraPos -= cameraSpeed * cameraUp;
+    if (freeCam) {
+      cameraPos -= cameraSpeed * cameraUp;
+    }
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
     cameraPos += cameraSpeed * cameraFront;
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)

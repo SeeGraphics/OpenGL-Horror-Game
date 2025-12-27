@@ -28,7 +28,7 @@ class Camera {
   bool mouseDisabled;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
-  void ProcessKeyboard(GLFWwindow* window, float deltaTime);
+  void ProcessKeyboard(GLFWwindow* window, float deltaTime, bool freeCam);
   void ProcessMouse(double xpos, double ypos);
   glm::mat4 GetViewMatrix();
 

@@ -20,6 +20,7 @@
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+unsigned int loadCubemap(std::vector<std::string> faces);
 
 // settings
 // commented out since we use the fullscreen on startupq
@@ -95,7 +96,8 @@ int main() {
 
   // build and compile our shader program
   // ------------------------------------
-  Shader ourShader("Shader/texture.vs", "Shader/texture.fs");
+  Shader ourShader("Shader/default.vs", "Shader/default.fs");
+  Shader skyboxShader("Shader/skybox.vs", "Shader/skybox.fs");
 
   // regular buffers
   unsigned int VBO, VAO, EBO, instancedVBO;
@@ -146,6 +148,24 @@ int main() {
   }
 
   glBindVertexArray(0);
+
+  // skybox
+  unsigned int skyboxVAO, skyboxVBO;
+  glGenVertexArrays(1, &skyboxVAO);
+  glGenBuffers(1, &skyboxVBO);
+  glBindVertexArray(skyboxVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices,
+               GL_STATIC_DRAW);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+
+  // Load textures
+  std::vector<std::string> faces{
+      "assets/skybox/right.jpg", "assets/skybox/left.jpg",
+      "assets/skybox/top.jpg",   "assets/skybox/bottom.jpg",
+      "assets/skybox/front.jpg", "assets/skybox/back.jpg"};
+  unsigned int cubemapTexture = loadCubemap(faces);
 
   // load and create a texture
   // -------------------------
@@ -212,6 +232,10 @@ int main() {
     ImGui::PopItemWidth();
     ImGui::End();
 
+    // 3. Window
+    ImGui::Begin("Environment");
+    ImGui::End();
+
     // OPEN_GL
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glEnable(GL_DEPTH_TEST);
@@ -268,6 +292,24 @@ int main() {
     glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
     glBindVertexArray(VAO);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 36, modelMatrices.size());
+
+    // --- SKYBOX RENDER START ---
+    glDepthFunc(GL_LEQUAL);  // disable depth buffer (skybox is at depth 1.0)
+    skyboxShader.use();
+
+    // Remove translation from view matrix so skybox stays centered on player
+    glm::mat4 skyView = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "view"), 1,
+                       GL_FALSE, glm::value_ptr(skyView));
+    glUniformMatrix4fv(glGetUniformLocation(skyboxShader.ID, "projection"), 1,
+                       GL_FALSE, glm::value_ptr(projection));
+
+    glBindVertexArray(skyboxVAO);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
+    glDepthFunc(GL_LESS);  // Reset
+    // --- SKYBOX RENDER END ---
 
     // render imgui
     ImGui::Render();
@@ -351,4 +393,33 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   // and height will be significantly larger than specified on retina displays.
   (void)window;
   glViewport(0, 0, width, height);
+}
+
+// for skybox
+unsigned int loadCubemap(std::vector<std::string> faces) {
+  unsigned int textureID;
+  glGenTextures(1, &textureID);
+  glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+  int width, height, nrChannels;
+  for (unsigned int i = 0; i < faces.size(); i++) {
+    unsigned char* data =
+        stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+    if (data) {
+      glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height,
+                   0, GL_RGB, GL_UNSIGNED_BYTE, data);
+      stbi_image_free(data);
+    } else {
+      std::cout << "Cubemap tex failed to load at path: " << faces[i]
+                << std::endl;
+      stbi_image_free(data);
+    }
+  }
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+  return textureID;
 }

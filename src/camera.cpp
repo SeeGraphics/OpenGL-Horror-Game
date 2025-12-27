@@ -29,7 +29,7 @@ Camera::Camera() {
   mouseDisabled = true;
 
   // bobbing settings
-  bobbingAmount = 0.02f;
+  bobbingAmount = 0.03f;
   bobbingSpeed = 3.0f;
   bobTimer = 0.0f;
   visualBobOffset = 0.0f;
@@ -131,6 +131,7 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   if (freeCam) {
     // Fly mode: Instant response
     if (glm::length(wishDir) > 0.0f) {
+      currentSpeed = 20.0f;
       cameraPos += glm::normalize(wishDir) * currentSpeed * deltaTime;
     }
     velocity = glm::vec3(0.0f);  // Kill momentum when switching to freeCam

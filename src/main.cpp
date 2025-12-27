@@ -23,7 +23,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 unsigned int loadCubemap(std::vector<std::string> faces);
 
 // settings
-// commented out since we use the fullscreen on startupq
+// commented out since we use the fullscreen on startup
 // const unsigned int SCR_WIDTH = 1200;
 // const unsigned int SCR_HEIGHT = 800;
 float cubeScale = 1.0f;  // for minecraft size cubes

@@ -9,8 +9,10 @@ class Camera {
  public:
   Camera();
   float cameraHeight;  // eye level changable (e.g crouching)
+  float playerHeight;  // floor level, dont change
   glm::vec3 cameraPos;
-  glm::vec3 cameraFront;
+  glm::vec3 cameraFront;  // for flying
+  glm::vec3 flatFront;    // for walking, avoids not moving when looking down
   glm::vec3 cameraUp;
 
   glm::vec3 direction;
@@ -20,7 +22,6 @@ class Camera {
   // gravity and physics vars
   float GRAVITY;
   float jumpforce;
-  // float playerHeight = 2.0f;  // for collision
   glm::vec3 velocity;
   bool isGrounded;
 

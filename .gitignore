@@ -1,2 +1,8 @@
+
 /build
 todo.txt
+
+# macOS metadata files
+.DS_Store
+.AppleDouble
+.LSOverride

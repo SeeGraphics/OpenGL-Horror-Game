@@ -5,6 +5,27 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+// constructor for the vars
+Camera::Camera() {
+  cameraHeight = 1.5f;  // eye level changable (e.g crouching)
+  cameraPos = glm::vec3(0.0f, cameraHeight, 3.0f);
+  cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+  cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+  yaw = -90.0;
+  pitch = 0.0;
+
+  // gravity and physics vars
+  GRAVITY = -9.81f;
+  jumpforce = 2.0f;
+  // float playerHeight = 2.0f;  // for collision
+  velocity = glm::vec3(0.0f);
+  isGrounded = false;
+
+  // for ungrabbing mouse with ´q´
+  mouseDisabled = true;
+}
+
 void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
   lastX = screenX / 2.0f;
   lastY = screenY / 2.0f;
@@ -23,8 +44,11 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime) {
     }
   }
 
-  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-    cameraPos += cameraSpeed * cameraUp;
+  if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+    // cameraPos += cameraSpeed * cameraUp;
+    velocity.y = jumpforce;
+    isGrounded = false;
+  }
   if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS)
     cameraPos -= cameraSpeed * cameraUp;
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)

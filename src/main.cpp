@@ -25,12 +25,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 // commented out since we use the fullscreen on startupq
 // const unsigned int SCR_WIDTH = 1200;
 // const unsigned int SCR_HEIGHT = 800;
-float cubeScale = 0.2f;  // for minecraft size cubes
+float cubeScale = 1.0f;  // for minecraft size cubes
 
 float deltaTime = 0.0f;  // Time between current frame and last frame
 float lastFrame = 0.0f;  // Time of last frame
 
 int floorsize = 100;
+float floorY = -1.0f;
 
 // toggle vars
 bool fullscreen = true;
@@ -120,7 +121,8 @@ int main() {
       glm::mat4 model = glm::mat4(1.0f);
       float xPos = (float)x * cubeScale;
       float zPos = (float)z * cubeScale;
-      model = glm::translate(model, glm::vec3(xPos, -1.0f, zPos));
+      model = glm::translate(model,
+                             glm::vec3(xPos, floorY, zPos));  // floor is at -1
       model = glm::scale(model, glm::vec3(cubeScale));
       modelMatrices.push_back(model);
     }
@@ -210,6 +212,23 @@ int main() {
     // global space
     glm::mat4 model = glm::mat4(1.0f);
 
+    // apply gravity & floor collision
+
+    if (!camera.isGrounded) {
+      camera.velocity.y += camera.GRAVITY * deltaTime;
+    }
+
+    camera.cameraPos += camera.velocity * deltaTime;
+    float floorLevel = floorY + camera.cameraHeight;
+
+    if (camera.cameraPos.y <= floorLevel) {
+      camera.cameraPos.y = floorLevel;  // Snap to floor
+      camera.velocity.y = 0.0f;         // Stop falling
+      camera.isGrounded = true;
+    } else {
+      camera.isGrounded = false;
+    }
+
     // view matrix
     glm::mat4 view = camera.GetViewMatrix();
 
@@ -224,16 +243,15 @@ int main() {
     glm::mat4 projection =
         glm::perspective(glm::radians(60.0f), aspect, 0.1f, 100.0f);
 
+    ourShader.use();
     int modelLoc = glGetUniformLocation(ourShader.ID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     int viewLoc = glGetUniformLocation(ourShader.ID, "view");
     glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
     int projectionLoc = glGetUniformLocation(ourShader.ID, "projection");
     glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-    ourShader.setMat4("view", view);
 
     // render container
-    ourShader.use();
     glBindVertexArray(VAO);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 36, modelMatrices.size());
 
@@ -297,6 +315,7 @@ void processInput(GLFWwindow* window) {
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+  (void)window;
   camera.ProcessMouse(xpos, ypos);
 }
 
@@ -306,5 +325,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
   // make sure the viewport matches the new window dimensions; note that width
   // and height will be significantly larger than specified on retina displays.
+  (void)window;
   glViewport(0, 0, width, height);
 }

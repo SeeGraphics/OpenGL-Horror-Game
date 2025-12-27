@@ -7,15 +7,25 @@ struct GLFWwindow;
 
 class Camera {
  public:
-  glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-  glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-  glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+  Camera();
+  float cameraHeight;  // eye level changable (e.g crouching)
+  glm::vec3 cameraPos;
+  glm::vec3 cameraFront;
+  glm::vec3 cameraUp;
 
   glm::vec3 direction;
-  float yaw = -90.0;
-  float pitch = 0.0;
+  float yaw;
+  float pitch;
 
-  bool mouseDisabled = true;
+  // gravity and physics vars
+  float GRAVITY;
+  float jumpforce;
+  // float playerHeight = 2.0f;  // for collision
+  glm::vec3 velocity;
+  bool isGrounded;
+
+  // for ungrabbing mouse with ´q´
+  bool mouseDisabled;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
   void ProcessKeyboard(GLFWwindow* window, float deltaTime);

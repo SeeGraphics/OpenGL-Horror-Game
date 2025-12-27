@@ -9,35 +9,58 @@ BUILD_DIR = build
 SRC_DIR   = src
 
 # --- FLAGS ---
-CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -I$(BREW_INC)
+# Added -I./imgui and -I./imgui/backends so headers are found
+CXXFLAGS = -std=c++17 -Wall -Wextra -I./include -I./imgui -I./imgui/backends -I$(BREW_INC)
 CFLAGS   = -Wall -I./include -I$(BREW_INC)
 LDFLAGS  = -L$(BREW_LIB) -lglfw -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 
 # --- FILES ---
 TARGET   = $(BUILD_DIR)/game
-SRC_CPP  = src/main.cpp src/camera.cpp src/shader.cpp src/stb_image.cpp
-SRC_C    = src/glad.c
 
-# Transform src/*.cpp and src/*.c into build/*.o
-OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(SRC_CPP))
-OBJ += $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRC_C))
+# 1. Project files in src/
+PROJECT_SRCS = $(SRC_DIR)/main.cpp $(SRC_DIR)/camera.cpp $(SRC_DIR)/shader.cpp $(SRC_DIR)/stb_image.cpp
+PROJECT_OBJS = $(PROJECT_SRCS:$(SRC_DIR)/%.cpp=$(BUILD_DIR)/%.o)
+
+# 2. ImGui Core files in imgui/
+IMGUI_SRCS = imgui/imgui.cpp imgui/imgui_draw.cpp imgui/imgui_widgets.cpp imgui/imgui_tables.cpp
+IMGUI_OBJS = $(IMGUI_SRCS:imgui/%.cpp=$(BUILD_DIR)/imgui_%.o)
+
+# 3. ImGui Backends in imgui/backends/
+BACKEND_SRCS = imgui/backends/imgui_impl_glfw.cpp imgui/backends/imgui_impl_opengl3.cpp
+BACKEND_OBJS = $(BACKEND_SRCS:imgui/backends/%.cpp=$(BUILD_DIR)/%.o)
+
+# 4. C files
+GLAD_OBJ = $(BUILD_DIR)/glad.o
+
+# Combine all objects
+OBJ = $(PROJECT_OBJS) $(IMGUI_OBJS) $(BACKEND_OBJS) $(GLAD_OBJ)
 
 # --- RULES ---
 all: $(TARGET)
 
-# Link the final executable
 $(TARGET): $(OBJ)
 	$(CXX) $(OBJ) -o $(TARGET) $(LDFLAGS)
 
-# Rule for C++ files
+# Rule for Project files (src/*.cpp)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Rule for C files
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+# Rule for Glad (src/glad.c)
+$(BUILD_DIR)/glad.o: $(SRC_DIR)/glad.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Create the build directory if it doesn't exist
+# Rule for ImGui Core (imgui/*.cpp)
+$(BUILD_DIR)/imgui_%.o: imgui/%.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Rule for ImGui Backends (imgui/backends/*.cpp)
+$(BUILD_DIR)/%.o: imgui/backends/%.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
 $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 

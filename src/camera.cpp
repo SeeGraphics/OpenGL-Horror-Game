@@ -27,6 +27,7 @@ Camera::Camera() {
 
   // for ungrabbing mouse with ´q´
   mouseDisabled = true;
+  flashlightEnabled = false;
 
   // bobbing settings
   bobbingAmount = 0.03f;
@@ -93,6 +94,17 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
     qWasDown = true;
   } else {
     qWasDown = false;
+  }
+
+  // toggle flashlight
+  static bool fWasDown = false;
+  if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+    if (!fWasDown) {
+      flashlightEnabled = !flashlightEnabled;
+    }
+    fWasDown = true;
+  } else {
+    fWasDown = false;
   }
 
   // Jump

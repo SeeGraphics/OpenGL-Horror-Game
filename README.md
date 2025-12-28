@@ -11,20 +11,18 @@ The Forest will be dark, filled with trees and a heavy layer of fog.
 Abandoned buildings and other interesting models will be scattered throughout the forest.
 
 ## Current State - Progress
-Right now its just a **test World with a flat floor, skybox and movement.**
-
 ![Showcase](images/showcase.png)
 
 ## How to Build
-You can build simply via the nop.cpp (nobuild).
+You can build simply via the nob.cpp (nobuild).
 Its a more simpler approach than having a dedicated build File.
 
 Just Run
 ```
-clang++ nop.cpp -o nop
+clang++ nob.cpp -o nob
 ```
 and then
 ```
-./nop     # to build game
-./nop run # to build and run
+./nob     # to build game
+./nob run # to build and run
 ```

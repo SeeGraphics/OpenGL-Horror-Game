@@ -34,6 +34,7 @@ class Camera {
 
   // for ungrabbing mouse with ´q´
   bool mouseDisabled;
+  bool flashlightEnabled;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
   void ProcessKeyboard(GLFWwindow* window, float deltaTime, bool freeCam);

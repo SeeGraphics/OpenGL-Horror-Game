@@ -42,9 +42,11 @@ float specularStrength = 0.010f;  // get rid of those circles on the floor
 float shininess = 32.0f;
 glm::vec3 moonDir(-0.2f, -1.0f, -0.3f);
 glm::vec3 moonColor(0.6f, 0.65f, 0.8f);
-float flashlightBrightness = 2.0f;
-float flashlightRadius = 18.0f;
+float flashlightBrightness = 3.5f;
+float flashlightRadius = 28.0f;
 glm::vec3 flashlightColor(1.0f, 0.95f, 0.85f);
+float fogDensity = 0.02f;
+glm::vec3 fogColor(0.02f, 0.02f, 0.03f);
 
 // toggle vars
 bool fullscreen = true;
@@ -223,6 +225,7 @@ int main() {
     ImGui::Begin("Settings");
     ImGui::Checkbox("Free Cam", &freeCam);
     ImGui::Checkbox("Wireframe", &wireframe);
+    ImGui::Checkbox("Flashlight", &camera.flashlightEnabled);
     ImGui::PushItemWidth(50);
     ImGui::SliderFloat("Render Distance", &renderDistance, 5.0f, 1000.0f);
     ImGui::PopItemWidth();
@@ -237,6 +240,7 @@ int main() {
                        10.0f);
     ImGui::SliderFloat("Flashlight Radius (deg)", &flashlightRadius, 1.0f,
                        60.0f);
+    ImGui::SliderFloat("Fog", &fogDensity, 0.005, 0.50);
     ImGui::End();
 
     // render
@@ -317,12 +321,17 @@ int main() {
                  glm::value_ptr(flashlightDir));
     glUniform3fv(glGetUniformLocation(ourShader.ID, "spotColor"), 1,
                  glm::value_ptr(flashlightColor));
+    float spotIntensity =  // for flashlight toggle
+        camera.flashlightEnabled ? flashlightBrightness : 0.0f;
     glUniform1f(glGetUniformLocation(ourShader.ID, "spotIntensity"),
-                flashlightBrightness);
+                spotIntensity);
     glUniform1f(glGetUniformLocation(ourShader.ID, "spotInnerCutoff"),
                 flashlightInnerCutoff);
     glUniform1f(glGetUniformLocation(ourShader.ID, "spotOuterCutoff"),
                 flashlightOuterCutoff);
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "fogColor"), 1,
+                 glm::value_ptr(fogColor));
+    glUniform1f(glGetUniformLocation(ourShader.ID, "fogDensity"), fogDensity);
 
     int modelLoc = glGetUniformLocation(ourShader.ID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));

@@ -19,6 +19,8 @@ uniform vec3 spotColor;
 uniform float spotIntensity;
 uniform float spotInnerCutoff;
 uniform float spotOuterCutoff;
+uniform vec3 fogColor;
+uniform float fogDensity;
 
 void main()
 {
@@ -54,5 +56,11 @@ void main()
 
     vec3 color =
         (ambient + diffuse + spotDiffuse) * albedo + specular + spotSpecular;
-    FragColor = vec4(color, 1.0);
+
+    float distance = length(viewPos - FragPos);
+    float fogFactor = exp(-fogDensity * distance);
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
+    vec3 finalColor = mix(fogColor, color, fogFactor);
+
+    FragColor = vec4(finalColor, 1.0);
 }

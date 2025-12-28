@@ -42,12 +42,9 @@ bool wireframe = false;
 bool freeCam = false;
 
 // camera
-// ---------
 Camera camera;
 
 int main() {
-  // glfw: initialize and configure
-  // ------------------------------
   glfwInit();
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -55,10 +52,7 @@ int main() {
   glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // for mac
   glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
 
-  // glfw window creation
-  // --------------------
-
-  // fullscreen on startup
+  // glfw window creation fullscreen on startup
   GLFWmonitor* monitor = glfwGetPrimaryMonitor();
   const GLFWvidmode* mode = glfwGetVideoMode(monitor);
   GLFWwindow* window = glfwCreateWindow(mode->width, mode->height,
@@ -74,7 +68,6 @@ int main() {
   glfwSwapInterval(0);  // no v-sync
 
   // glad: load all OpenGL function pointers
-  // ---------------------------------------
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
@@ -94,27 +87,27 @@ int main() {
   glCullFace(GL_BACK);
   glFrontFace(GL_CCW);
 
-  // build and compile our shader program
-  // ------------------------------------
+  // build and compile shader programs
   Shader ourShader("Shader/default.vs", "Shader/default.fs");
   Shader skyboxShader("Shader/skybox.vs", "Shader/skybox.fs");
 
   // regular buffers
   unsigned int VBO, VAO, EBO, instancedVBO;
-
   glGenVertexArrays(1, &VAO);
   glGenBuffers(1, &VBO);
   glGenBuffers(1, &EBO);
   glGenBuffers(1, &instancedVBO);
-
   glBindVertexArray(VAO);
+
   // cube geometry
   glBindBuffer(GL_ARRAY_BUFFER, VBO);
   glBufferData(GL_ARRAY_BUFFER, sizeof(CubeVertices), CubeVertices,
                GL_STATIC_DRAW);
+
   // position attribute
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
+
   // texture coord attribute
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
                         (void*)(3 * sizeof(float)));
@@ -160,24 +153,19 @@ int main() {
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 
-  // Load textures
+  // Load skybox textures
   std::vector<std::string> faces{
       "assets/skybox/right.jpg", "assets/skybox/left.jpg",
       "assets/skybox/top.jpg",   "assets/skybox/bottom.jpg",
       "assets/skybox/front.jpg", "assets/skybox/back.jpg"};
   unsigned int cubemapTexture = loadCubemap(faces);
 
-  // load and create a texture
-  // -------------------------
+  // load and create cube texture
   unsigned int texture;
   glGenTextures(1, &texture);
-  glBindTexture(GL_TEXTURE_2D,
-                texture);  // all upcoming GL_TEXTURE_2D operations now have
-                           // effect on this texture object
+  glBindTexture(GL_TEXTURE_2D, texture);
   // set the texture wrapping parameters
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
-                  GL_REPEAT);  // set texture wrapping to GL_REPEAT (default
-                               // wrapping method)
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
   // set texture filtering parameters
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -198,7 +186,6 @@ int main() {
   stbi_image_free(data);
 
   // render loop
-  // -----------
   while (!glfwWindowShouldClose(window)) {
     // calculate delta time
     float currentFrame = glfwGetTime();
@@ -206,24 +193,20 @@ int main() {
     lastFrame = currentFrame;
 
     // input
-    // -----
     glfwSetCursorPosCallback(window, mouse_callback);
     processInput(window);
 
     // render
-    // ------
 
     // imgui
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // 1. Window
     ImGui::Begin("FPS");
     ImGui::Text("%.f", io.Framerate);
     ImGui::End();
 
-    // 2. Window
     ImGui::Begin("Settings");
     ImGui::Checkbox("Free Cam", &freeCam);
     ImGui::Checkbox("Wireframe", &wireframe);
@@ -232,7 +215,6 @@ int main() {
     ImGui::PopItemWidth();
     ImGui::End();
 
-    // 3. Window
     ImGui::Begin("Environment");
     ImGui::End();
 
@@ -293,7 +275,7 @@ int main() {
     glBindVertexArray(VAO);
     glDrawArraysInstanced(GL_TRIANGLES, 0, 36, modelMatrices.size());
 
-    // --- SKYBOX RENDER START ---
+    // Skybox
     glDepthFunc(GL_LEQUAL);  // disable depth buffer (skybox is at depth 1.0)
     skyboxShader.use();
 
@@ -309,19 +291,17 @@ int main() {
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glDepthFunc(GL_LESS);  // Reset
-    // --- SKYBOX RENDER END ---
 
     // render imgui
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-    // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
-    // etc.)
+    // glfw: swap buffers and poll IO events
     glfwSwapBuffers(window);
     glfwPollEvents();
   }
 
-  // optional: de-allocate all resources once they've outlived their purpose:
+  // de-allocate all resources once theyve outlived their purpose:
   glDeleteVertexArrays(1, &VAO);
   glDeleteBuffers(1, &VBO);
   glDeleteBuffers(1, &EBO);
@@ -385,12 +365,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
   }
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback
-// function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-  // make sure the viewport matches the new window dimensions; note that width
-  // and height will be significantly larger than specified on retina displays.
   (void)window;
   glViewport(0, 0, width, height);
 }

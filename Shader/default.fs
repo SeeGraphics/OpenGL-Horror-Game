@@ -13,6 +13,12 @@ uniform float ambientStrength;
 uniform float diffuseStrength;
 uniform float specularStrength;
 uniform float shininess;
+uniform vec3 spotPos;
+uniform vec3 spotDir;
+uniform vec3 spotColor;
+uniform float spotIntensity;
+uniform float spotInnerCutoff;
+uniform float spotOuterCutoff;
 
 void main()
 {
@@ -30,6 +36,23 @@ void main()
     vec3 diffuse = diffuseStrength * diff * lightColor;
     vec3 specular = specularStrength * spec * lightColor;
 
-    vec3 color = (ambient + diffuse) * albedo + specular;
+    vec3 spotDirNorm = normalize(spotDir);
+    vec3 toFrag = normalize(FragPos - spotPos);
+    float theta = dot(toFrag, spotDirNorm);
+    float epsilon = spotInnerCutoff - spotOuterCutoff;
+    float spotFactor = clamp((theta - spotOuterCutoff) / epsilon, 0.0, 1.0);
+
+    vec3 spotLightDir = normalize(spotPos - FragPos);
+    float spotDiff = max(dot(norm, spotLightDir), 0.0);
+    vec3 spotReflect = reflect(-spotLightDir, norm);
+    float spotSpec = pow(max(dot(viewDir, spotReflect), 0.0), shininess);
+
+    vec3 spotDiffuse =
+        diffuseStrength * spotDiff * spotColor * spotIntensity * spotFactor;
+    vec3 spotSpecular =
+        specularStrength * spotSpec * spotColor * spotIntensity * spotFactor;
+
+    vec3 color =
+        (ambient + diffuse + spotDiffuse) * albedo + specular + spotSpecular;
     FragColor = vec4(color, 1.0);
 }

@@ -38,10 +38,13 @@ float renderDistance = 500.0f;
 
 float ambientStrength = 0.05f;
 float diffuseStrength = 0.35f;
-float specularStrength = 0.25f;
+float specularStrength = 0.010f;  // get rid of those circles on the floor
 float shininess = 32.0f;
 glm::vec3 moonDir(-0.2f, -1.0f, -0.3f);
 glm::vec3 moonColor(0.6f, 0.65f, 0.8f);
+float flashlightBrightness = 2.0f;
+float flashlightRadius = 18.0f;
+glm::vec3 flashlightColor(1.0f, 0.95f, 0.85f);
 
 // toggle vars
 bool fullscreen = true;
@@ -230,6 +233,10 @@ int main() {
     ImGui::SliderFloat("Diffuse", &diffuseStrength, 0.01f, 10.0f);
     ImGui::SliderFloat("Specular", &specularStrength, 0.01f, 10.0f);
     ImGui::SliderFloat("Shininess", &shininess, 1.0f, 100.0f);
+    ImGui::SliderFloat("Flashlight Brightness", &flashlightBrightness, 0.0f,
+                       10.0f);
+    ImGui::SliderFloat("Flashlight Radius (deg)", &flashlightRadius, 1.0f,
+                       60.0f);
     ImGui::End();
 
     // render
@@ -281,6 +288,8 @@ int main() {
     ourShader.use();
 
     // phong lighting
+
+    // moon / general light
     glm::vec3 moonDirNorm = glm::normalize(moonDir);
     glUniform3fv(glGetUniformLocation(ourShader.ID, "viewPos"), 1,
                  glm::value_ptr(camera.cameraPos));
@@ -295,6 +304,25 @@ int main() {
     glUniform1f(glGetUniformLocation(ourShader.ID, "specularStrength"),
                 specularStrength);
     glUniform1f(glGetUniformLocation(ourShader.ID, "shininess"), shininess);
+
+    // flashlight spotlight
+    glm::vec3 flashlightPos = camera.cameraPos;
+    glm::vec3 flashlightDir = glm::normalize(camera.cameraFront);
+    float flashlightInnerCutoff =
+        glm::cos(glm::radians(flashlightRadius * 0.85f));
+    float flashlightOuterCutoff = glm::cos(glm::radians(flashlightRadius));
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "spotPos"), 1,
+                 glm::value_ptr(flashlightPos));
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "spotDir"), 1,
+                 glm::value_ptr(flashlightDir));
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "spotColor"), 1,
+                 glm::value_ptr(flashlightColor));
+    glUniform1f(glGetUniformLocation(ourShader.ID, "spotIntensity"),
+                flashlightBrightness);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "spotInnerCutoff"),
+                flashlightInnerCutoff);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "spotOuterCutoff"),
+                flashlightOuterCutoff);
 
     int modelLoc = glGetUniformLocation(ourShader.ID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -362,7 +390,8 @@ void processInput(GLFWwindow* window) {
   } else {
     vWasDown = false;
   }
-  if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+
+  if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
     if (!fullscreen) {
       // Switch to fullscreen
       GLFWmonitor* monitor = glfwGetPrimaryMonitor();

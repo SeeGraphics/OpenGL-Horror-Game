@@ -36,6 +36,13 @@ float floorY = -1.0f;
 
 float renderDistance = 500.0f;
 
+float ambientStrength = 0.05f;
+float diffuseStrength = 0.35f;
+float specularStrength = 0.25f;
+float shininess = 32.0f;
+glm::vec3 moonDir(-0.2f, -1.0f, -0.3f);
+glm::vec3 moonColor(0.6f, 0.65f, 0.8f);
+
 // toggle vars
 bool fullscreen = true;
 bool wireframe = false;
@@ -105,12 +112,17 @@ int main() {
                GL_STATIC_DRAW);
 
   // position attribute
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
 
-  // texture coord attribute
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+  // normal attribute
+  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(2);
+
+  // texture coord attribute
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                        (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
   std::vector<glm::mat4> modelMatrices;
@@ -196,8 +208,6 @@ int main() {
     glfwSetCursorPosCallback(window, mouse_callback);
     processInput(window);
 
-    // render
-
     // imgui
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -216,10 +226,16 @@ int main() {
     ImGui::End();
 
     ImGui::Begin("Environment");
+    ImGui::SliderFloat("Ambient", &ambientStrength, 0.01f, 10.0f);
+    ImGui::SliderFloat("Diffuse", &diffuseStrength, 0.01f, 10.0f);
+    ImGui::SliderFloat("Specular", &specularStrength, 0.01f, 10.0f);
+    ImGui::SliderFloat("Shininess", &shininess, 1.0f, 100.0f);
     ImGui::End();
 
+    // render
+
     // OPEN_GL
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    glClearColor(0.02f, 0.02f, 0.03f, 1.0f);
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -263,6 +279,23 @@ int main() {
         glm::perspective(glm::radians(60.0f), aspect, 0.1f, renderDistance);
 
     ourShader.use();
+
+    // phong lighting
+    glm::vec3 moonDirNorm = glm::normalize(moonDir);
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "viewPos"), 1,
+                 glm::value_ptr(camera.cameraPos));
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "lightDir"), 1,
+                 glm::value_ptr(moonDirNorm));
+    glUniform3fv(glGetUniformLocation(ourShader.ID, "lightColor"), 1,
+                 glm::value_ptr(moonColor));
+    glUniform1f(glGetUniformLocation(ourShader.ID, "ambientStrength"),
+                ambientStrength);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "diffuseStrength"),
+                diffuseStrength);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "specularStrength"),
+                specularStrength);
+    glUniform1f(glGetUniformLocation(ourShader.ID, "shininess"), shininess);
+
     int modelLoc = glGetUniformLocation(ourShader.ID, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
     int viewLoc = glGetUniformLocation(ourShader.ID, "view");

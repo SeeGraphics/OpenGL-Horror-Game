@@ -50,6 +50,7 @@ int main(int argc, char** argv) {
       {"imgui/imgui_tables.cpp", "build/imgui_tables.o"},
       {"imgui/backends/imgui_impl_glfw.cpp", "build/imgui_impl_glfw.o"},
       {"imgui/backends/imgui_impl_opengl3.cpp", "build/imgui_impl_opengl3.o"},
+      {"src/app.cpp", "build/app.o"},
       {"src/main.cpp", "build/main.o"},
       {"src/camera.cpp", "build/camera.o"},
       {"src/shader.cpp", "build/shader.o"},

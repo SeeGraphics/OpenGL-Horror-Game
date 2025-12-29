@@ -1,7 +1,4 @@
-#define GL_SILENCE_DEPRECATION
-// clang-format off
 #include <GLFW/glfw3.h>
-// clang-format on
 
 #include <iostream>
 

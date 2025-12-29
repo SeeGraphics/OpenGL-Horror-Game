@@ -1,10 +1,12 @@
 #include "scene/world.hpp"
 
+#include <stb_image.h>
+
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <vector>
-
-#include <stb_image.h>
 
 #include "app.hpp"
 
@@ -31,15 +33,171 @@ static float hashToUnitFloat(int x, int z, int seed) {
   return (h & 0x00FFFFFF) / 16777216.0f;
 }
 
+static int addModelAsset(AppState& state, const char* id, const char* path,
+                         const ModelRenderSettings& settings) {
+  state.modelAssets.emplace_back();
+  ModelAsset& asset = state.modelAssets.back();
+  if (id) {
+    asset.id = id;
+  }
+  if (path) {
+    asset.path = path;
+  }
+  asset.renderSettings = settings;
+  if (!asset.path.empty()) {
+    asset.model.Load(asset.path.c_str());
+  }
+  return static_cast<int>(state.modelAssets.size()) - 1;
+}
+
+static int addModelInstance(AppState& state, int assetIndex,
+                            const glm::vec3& position,
+                            const glm::vec3& rotation, const glm::vec3& scale) {
+  if (assetIndex < 0 ||
+      assetIndex >= static_cast<int>(state.modelAssets.size())) {
+    return -1;
+  }
+
+  ModelInstance instance;
+  instance.assetIndex = assetIndex;
+  instance.position = position;
+  instance.rotation = rotation;
+  instance.scale = scale;
+  state.modelInstances.push_back(instance);
+  return static_cast<int>(state.modelInstances.size()) - 1;
+}
+
+static void scatterTrees(AppState& state, int assetIndex) {
+  if (assetIndex < 0) {
+    return;
+  }
+
+  const float cellSize = state.cubeScale * 8.0f;
+  float density = state.treeDensity;
+  if (density < 0.0f) density = 0.0f;
+  if (density > 8.0f) density = 8.0f;
+  const float baseScale = 0.003f;
+  const float scaleJitter = 0.35f;  // different tree sizes
+  const float jitterScale = 10.0f;  // scatter more evenly
+
+  int gridSize = state.floorSize * 2;
+  float tileSize = state.cubeScale;
+  float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;
+  float span = static_cast<float>(gridSize) * tileSize;
+  if (cellSize <= 0.0f || span <= 0.0f) {
+    return;
+  }
+
+  int cellsX = static_cast<int>(std::ceil(span / cellSize));
+  int cellsZ = static_cast<int>(std::ceil(span / cellSize));
+  float maxPos = start + span;
+
+  int instanceStart = static_cast<int>(state.modelInstances.size());
+  int spawned = 0;
+
+  for (int z = 0; z < cellsZ; ++z) {
+    float cellCenterZ = start + (static_cast<float>(z) + 0.5f) * cellSize;
+    if (cellCenterZ < start || cellCenterZ > maxPos) {
+      continue;
+    }
+    for (int x = 0; x < cellsX; ++x) {
+      float cellCenterX = start + (static_cast<float>(x) + 0.5f) * cellSize;
+      if (cellCenterX < start || cellCenterX > maxPos) {
+        continue;
+      }
+
+      int baseCount = static_cast<int>(std::floor(density));
+      float extraChance = density - static_cast<float>(baseCount);
+      int instanceCount = baseCount;
+      if (extraChance > 0.0f) {
+        float roll = hashToUnitFloat(x, z, 41);
+        if (roll < extraChance) {
+          instanceCount += 1;
+        }
+      }
+      if (instanceCount == 0) {
+        continue;
+      }
+
+      for (int i = 0; i < instanceCount; ++i) {
+        int seedBase = 43 + (i * 7);
+        float offsetX =
+            (hashToUnitFloat(x, z, seedBase) - 0.5f) * cellSize * jitterScale;
+        float offsetZ = (hashToUnitFloat(x, z, seedBase + 1) - 0.5f) *
+                        cellSize * jitterScale;
+        float xPos = cellCenterX + offsetX;
+        float zPos = cellCenterZ + offsetZ;
+        if (xPos < start || xPos > maxPos || zPos < start || zPos > maxPos) {
+          continue;
+        }
+        float yPos = getTerrainHeightAt(state, xPos, zPos);
+        float rotationY = hashToUnitFloat(x, z, seedBase + 3) * 360.0f;
+        float scaleRand = hashToUnitFloat(x, z, seedBase + 5);
+        float scale =
+            baseScale * (1.0f - scaleJitter + (scaleRand * scaleJitter * 2.0f));
+
+        addModelInstance(state, assetIndex, glm::vec3(xPos, yPos, zPos),
+                         glm::vec3(0.0f, rotationY, 0.0f), glm::vec3(scale));
+        spawned++;
+      }
+    }
+  }
+
+  if (spawned > 0) {
+    state.treeInstanceIndex = instanceStart;
+  }
+
+  state.treeInstanceDirty = true;
+  std::cout << "Trees spawned: " << spawned << std::endl;
+}
+
+static void resolveTreeCollisions(AppState& state) {
+  if (state.treeCollisionPositions.empty()) {
+    return;
+  }
+
+  float treeRadius = state.cubeScale * 0.25f;
+  float playerRadius = state.cubeScale * 0.35f;
+  float combinedRadius = treeRadius + playerRadius;
+  float combinedRadiusSq = combinedRadius * combinedRadius;
+
+  for (const glm::vec3& treePos : state.treeCollisionPositions) {
+    float dx = state.camera.cameraPos.x - treePos.x;
+    float dz = state.camera.cameraPos.z - treePos.z;
+    float distSq = dx * dx + dz * dz;
+    if (distSq >= combinedRadiusSq) {
+      continue;
+    }
+
+    float dist = std::sqrt(distSq);
+    float nx = 1.0f;
+    float nz = 0.0f;
+    if (dist > 0.0001f) {
+      nx = dx / dist;
+      nz = dz / dist;
+    }
+
+    float push = combinedRadius - dist;
+    state.camera.cameraPos.x += nx * push;
+    state.camera.cameraPos.z += nz * push;
+
+    float velDot = state.camera.velocity.x * nx + state.camera.velocity.z * nz;
+    if (velDot < 0.0f) {
+      state.camera.velocity.x -= velDot * nx;
+      state.camera.velocity.z -= velDot * nz;
+    }
+  }
+}
+
 static bool loadHeightmap() {
   if (heightmapLoaded || heightmapFailed) {
     return heightmapLoaded;
   }
 
   int channels = 0;
-  unsigned short* data = stbi_load_16("assets/heightmap_16bit.png",
-                                      &heightmapWidth, &heightmapHeight,
-                                      &channels, 1);
+  unsigned short* data =
+      stbi_load_16("assets/heightmap_16bit.png", &heightmapWidth,
+                   &heightmapHeight, &channels, 1);
   if (!data) {
     std::cout << "Heightmap failed to load" << std::endl;
     heightmapFailed = true;
@@ -165,8 +323,7 @@ void buildFloor(AppState& state) {
       float normalY = 2.0f * tileSize;
       float normalZ = heightD - heightU;
       float normalLen =
-          std::sqrt(normalX * normalX + normalY * normalY +
-                    normalZ * normalZ);
+          std::sqrt(normalX * normalX + normalY * normalY + normalZ * normalZ);
       if (normalLen > 0.0f) {
         normalX /= normalLen;
         normalY /= normalLen;
@@ -254,8 +411,8 @@ void buildGrass(AppState& state) {
   }
 
   int maxInstancesPerTile = static_cast<int>(std::ceil(density));
-  size_t tileCount =
-      static_cast<size_t>(maxX - minX + 1) * static_cast<size_t>(maxZ - minZ + 1);
+  size_t tileCount = static_cast<size_t>(maxX - minX + 1) *
+                     static_cast<size_t>(maxZ - minZ + 1);
   state.grassInstances.reserve(tileCount *
                                static_cast<size_t>(maxInstancesPerTile));
 
@@ -326,9 +483,10 @@ void updateGroundCollision(AppState& state) {
   }
 
   state.camera.cameraPos += state.camera.velocity * state.deltaTime;
+  resolveTreeCollisions(state);
 
-  float groundHeight = getTerrainHeightAt(
-      state, state.camera.cameraPos.x, state.camera.cameraPos.z);
+  float groundHeight = getTerrainHeightAt(state, state.camera.cameraPos.x,
+                                          state.camera.cameraPos.z);
   float floorLevel = groundHeight + state.camera.cameraHeight;
 
   float groundStickEpsilon = 0.2f * state.cubeScale;
@@ -353,4 +511,57 @@ void updateGroundCollision(AppState& state) {
   }
 
   state.camera.isGrounded = false;
+}
+
+void initWorldModels(AppState& state) {
+  state.modelAssets.clear();
+  state.modelInstances.clear();
+  state.treeAssetIndex = -1;
+  state.treeInstanceIndex = -1;
+
+  int templateCount = 0;
+  const ModelTemplate* templates = GetModelTemplates(&templateCount);
+  int treeAsset = -1;
+  for (int i = 0; i < templateCount; ++i) {
+    const ModelTemplate& entry = templates[i];
+    int assetIndex =
+        addModelAsset(state, entry.id, entry.path, entry.renderSettings);
+    if (entry.id && std::strcmp(entry.id, "Tree") == 0) {
+      treeAsset = assetIndex;
+    }
+  }
+  state.treeAssetIndex = treeAsset;
+
+  scatterTrees(state, treeAsset);
+}
+
+void rebuildWorldTrees(AppState& state) {
+  if (state.treeAssetIndex < 0) {
+    return;
+  }
+
+  state.modelInstances.erase(
+      std::remove_if(state.modelInstances.begin(), state.modelInstances.end(),
+                     [&](const ModelInstance& instance) {
+                       return instance.assetIndex == state.treeAssetIndex;
+                     }),
+      state.modelInstances.end());
+
+  state.treeInstanceIndex = -1;
+  scatterTrees(state, state.treeAssetIndex);
+}
+
+void updateWorldModelHeights(AppState& state) {
+  if (state.treeAssetIndex < 0) {
+    return;
+  }
+
+  for (ModelInstance& instance : state.modelInstances) {
+    if (instance.assetIndex != state.treeAssetIndex) {
+      continue;
+    }
+    float yPos =
+        getTerrainHeightAt(state, instance.position.x, instance.position.z);
+    instance.position.y = yPos;
+  }
 }

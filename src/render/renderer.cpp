@@ -19,6 +19,7 @@
 static unsigned int loadCubemap(const std::vector<std::string>& faces);
 static void uploadTerrainBuffers(AppState& state);
 static void uploadGrassInstances(AppState& state);
+static void uploadTreeInstances(AppState& state);
 
 bool renderInit(AppState& state, GLFWwindow* window) {
   (void)window;
@@ -187,8 +188,15 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   if (state.terrainDirty) {
     buildFloor(state);
     uploadTerrainBuffers(state);
+    updateWorldModelHeights(state);
     state.terrainDirty = false;
     state.grassDirty = true;
+    state.treeInstanceDirty = true;
+  }
+  if (state.treeDirty) {
+    rebuildWorldTrees(state);
+    state.treeDirty = false;
+    state.treeInstanceDirty = true;
   }
 
   float grassUpdateDistance = state.cubeScale * 2.0f;
@@ -204,6 +212,21 @@ void renderFrame(AppState& state, GLFWwindow* window) {
     buildGrass(state);
     uploadGrassInstances(state);
     state.grassDirty = false;
+  }
+  if (state.treeUpdateDistance > 0.0f) {
+    float treeMoveDx = state.camera.cameraPos.x - state.treeCullCenter.x;
+    float treeMoveDz = state.camera.cameraPos.z - state.treeCullCenter.y;
+    float treeMoveSq = (treeMoveDx * treeMoveDx) + (treeMoveDz * treeMoveDz);
+    float treeUpdateSq = state.treeUpdateDistance * state.treeUpdateDistance;
+    if (treeMoveSq > treeUpdateSq) {
+      state.treeInstanceDirty = true;
+    }
+  }
+  if (state.treeInstanceVBO == 0 && state.treeAssetIndex >= 0) {
+    state.treeInstanceDirty = true;
+  }
+  if (state.treeInstanceDirty) {
+    uploadTreeInstances(state);
   }
 
   glClearColor(state.fogColor.x, state.fogColor.y, state.fogColor.z, 1.0f);
@@ -254,6 +277,8 @@ void renderFrame(AppState& state, GLFWwindow* window) {
               1.0f);
   glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"), 0);
   glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"), 0);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"), 0);
 
   // flashlight spotlight
   glm::vec3 flashlightPos = state.camera.cameraPos;
@@ -301,10 +326,87 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                  GL_UNSIGNED_INT, 0);
 
   if (!state.modelInstances.empty()) {
+    bool drewTrees = false;
+    if (state.treeAssetIndex >= 0 &&
+        state.treeAssetIndex < static_cast<int>(state.modelAssets.size()) &&
+        state.treeInstanceCount > 0) {
+      ModelAsset& asset = state.modelAssets[state.treeAssetIndex];
+      if (asset.model.IsLoaded()) {
+        const ModelRenderSettings& settings = asset.renderSettings;
+        glUniform1f(
+            glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
+            settings.albedoIntensity);
+        glUniform1f(glGetUniformLocation(state.worldShader->ID, "alphaCutoff"),
+                    settings.alphaCutoff);
+        glUniform1f(
+            glGetUniformLocation(state.worldShader->ID, "normalStrength"),
+            settings.normalStrength);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"),
+                    settings.normalDebug ? 1 : 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"),
+                    settings.doubleSided ? 1 : 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                    settings.useNormalMap ? 1 : 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
+                    settings.useNormalMap ? 1 : 0);
+        glUniform1i(
+            glGetUniformLocation(state.worldShader->ID, "useInstancing"), 1);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"),
+                    1);
+
+        glm::mat4 identity = glm::mat4(1.0f);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
+                           glm::value_ptr(identity));
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        glDepthFunc(GL_LESS);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                    0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
+                    0);
+        for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+          glActiveTexture(GL_TEXTURE0);
+          glBindTexture(GL_TEXTURE_2D, mesh.texture);
+          glBindVertexArray(mesh.vao);
+          glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
+                                  GL_UNSIGNED_INT, 0,
+                                  state.treeInstanceCount);
+        }
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDepthFunc(GL_LEQUAL);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"),
+                    0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                    settings.useNormalMap ? 1 : 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
+                    settings.useNormalMap ? 1 : 0);
+        for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+          glActiveTexture(GL_TEXTURE0);
+          glBindTexture(GL_TEXTURE_2D, mesh.texture);
+          if (settings.useNormalMap) {
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, mesh.normalMap);
+          }
+          glBindVertexArray(mesh.vao);
+          glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
+                                  GL_UNSIGNED_INT, 0,
+                                  state.treeInstanceCount);
+        }
+        glDepthFunc(GL_LESS);
+        drewTrees = true;
+      }
+    }
+
+    glUniform1i(
+        glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"), 0);
+
     for (const ModelInstance& instance : state.modelInstances) {
       if (instance.assetIndex < 0 ||
           instance.assetIndex >=
               static_cast<int>(state.modelAssets.size())) {
+        continue;
+      }
+      if (drewTrees && instance.assetIndex == state.treeAssetIndex) {
         continue;
       }
 
@@ -365,6 +467,8 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                 1.0f);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"), 0);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"), 0);
+    glUniform1i(
+        glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
     glUniform1f(glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
                 1.0f);
   }
@@ -447,6 +551,7 @@ void renderShutdown(AppState& state) {
   if (state.grassVBO) glDeleteBuffers(1, &state.grassVBO);
   if (state.grassEBO) glDeleteBuffers(1, &state.grassEBO);
   if (state.grassInstanceVBO) glDeleteBuffers(1, &state.grassInstanceVBO);
+  if (state.treeInstanceVBO) glDeleteBuffers(1, &state.treeInstanceVBO);
   for (ModelAsset& asset : state.modelAssets) {
     asset.model.Shutdown();
   }
@@ -509,4 +614,96 @@ static void uploadGrassInstances(AppState& state) {
   glBufferData(GL_ARRAY_BUFFER, state.grassInstances.size() * sizeof(glm::vec3),
                state.grassInstances.data(), GL_STATIC_DRAW);
   glBindVertexArray(0);
+}
+
+static void uploadTreeInstances(AppState& state) {
+  state.treeInstanceCount = 0;
+  if (state.treeAssetIndex < 0 ||
+      state.treeAssetIndex >= static_cast<int>(state.modelAssets.size())) {
+    state.treeInstanceDirty = false;
+    return;
+  }
+
+  ModelAsset& asset = state.modelAssets[state.treeAssetIndex];
+  if (!asset.model.IsLoaded()) {
+    state.treeInstanceDirty = false;
+    return;
+  }
+
+  std::vector<glm::mat4> matrices;
+  matrices.reserve(state.modelInstances.size());
+  state.treeCollisionPositions.clear();
+  state.treeCollisionPositions.reserve(state.modelInstances.size());
+  float radius = state.treeRenderRadius;
+  if (radius < 0.0f) {
+    radius = 0.0f;
+  }
+  float radiusSq = radius * radius;
+  float centerX = state.camera.cameraPos.x;
+  float centerZ = state.camera.cameraPos.z;
+  for (const ModelInstance& instance : state.modelInstances) {
+    if (instance.assetIndex != state.treeAssetIndex) {
+      continue;
+    }
+    float dx = instance.position.x - centerX;
+    float dz = instance.position.z - centerZ;
+    if ((dx * dx + dz * dz) > radiusSq) {
+      continue;
+    }
+
+    state.treeCollisionPositions.push_back(instance.position);
+
+    glm::mat4 modelMatrix = glm::mat4(1.0f);
+    modelMatrix = glm::translate(modelMatrix, instance.position);
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                              glm::vec3(1.0f, 0.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
+                              glm::vec3(0.0f, 1.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
+                              glm::vec3(0.0f, 0.0f, 1.0f));
+    modelMatrix = glm::scale(modelMatrix, instance.scale);
+    matrices.push_back(modelMatrix);
+  }
+
+  state.treeInstanceCount = static_cast<int>(matrices.size());
+  if (state.treeInstanceCount == 0) {
+    state.treeCollisionPositions.clear();
+    state.treeInstanceDirty = false;
+    return;
+  }
+
+  if (state.treeInstanceVBO == 0) {
+    glGenBuffers(1, &state.treeInstanceVBO);
+  }
+
+  glBindBuffer(GL_ARRAY_BUFFER, state.treeInstanceVBO);
+  glBufferData(GL_ARRAY_BUFFER, matrices.size() * sizeof(glm::mat4),
+               matrices.data(), GL_STATIC_DRAW);
+
+  std::size_t vec4Size = sizeof(glm::vec4);
+  for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+    glBindVertexArray(mesh.vao);
+    glBindBuffer(GL_ARRAY_BUFFER, state.treeInstanceVBO);
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+                          (void*)0);
+    glEnableVertexAttribArray(5);
+    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+                          (void*)(vec4Size));
+    glEnableVertexAttribArray(6);
+    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+                          (void*)(vec4Size * 2));
+    glEnableVertexAttribArray(7);
+    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
+                          (void*)(vec4Size * 3));
+    glVertexAttribDivisor(4, 1);
+    glVertexAttribDivisor(5, 1);
+    glVertexAttribDivisor(6, 1);
+    glVertexAttribDivisor(7, 1);
+  }
+
+  glBindVertexArray(0);
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  state.treeCullCenter = glm::vec2(centerX, centerZ);
+  state.treeInstanceDirty = false;
 }

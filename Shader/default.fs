@@ -11,6 +11,7 @@ uniform sampler2D normalMap;
 uniform bool useNormalMap;
 uniform float normalStrength;
 uniform bool normalDebug;
+uniform bool depthOnly;
 uniform bool doubleSided;
 uniform vec3 lightDir;
 uniform vec3 lightColor;
@@ -35,6 +36,10 @@ void main()
     vec4 texColor = texture(ourTexture, TexCoord);
     if (texColor.a < alphaCutoff) {
         discard;
+    }
+    if (depthOnly) {
+        FragColor = vec4(0.0);
+        return;
     }
     vec3 albedo = texColor.rgb * albedoIntensity;
 

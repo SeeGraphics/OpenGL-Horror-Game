@@ -7,5 +7,8 @@ void buildFloor(AppState& state);
 void buildGrass(AppState& state);
 void updateGroundCollision(AppState& state);
 float getTerrainHeightAt(const AppState& state, float worldX, float worldZ);
+void initWorldModels(AppState& state);
+void updateWorldModelHeights(AppState& state);
+void rebuildWorldTrees(AppState& state);
 
 #endif

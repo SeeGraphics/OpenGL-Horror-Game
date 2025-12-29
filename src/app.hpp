@@ -42,6 +42,12 @@ struct AppState {
   float grassMidDensity = 0.35f;
   bool grassDirty = true;
   glm::vec2 grassCenter = glm::vec2(0.0f);
+  float treeDensity = 0.02f;
+  bool treeDirty = false;
+  bool treeInstanceDirty = false;
+  float treeRenderRadius = 80.0f;
+  float treeUpdateDistance = 6.0f;
+  glm::vec2 treeCullCenter = glm::vec2(0.0f);
   float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
 
   bool fullscreen = true;
@@ -72,6 +78,9 @@ struct AppState {
   unsigned int grassInstanceVBO = 0;
   unsigned int grassTexture = 0;
   int grassIndexCount = 0;
+  unsigned int treeInstanceVBO = 0;
+  int treeInstanceCount = 0;
+  std::vector<glm::vec3> treeCollisionPositions;
 
   std::vector<float> terrainVertices;
   std::vector<unsigned int> terrainIndices;

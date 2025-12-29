@@ -67,16 +67,36 @@ void drawDebugUi(AppState& state) {
                          state.renderDistance)) {
     state.grassDirty = true;
   }
-  if (ImGui::SliderFloat("Grass Mid Density", &state.grassMidDensity, 0.0f,
-                         1.0f)) {
-    state.grassDirty = true;
+  if (ImGui::SliderFloat("Tree Density", &state.treeDensity, 0.0f, 8.0f)) {
+    state.treeDirty = true;
   }
-  if (state.treeInstanceIndex >= 0 &&
-      state.treeInstanceIndex < static_cast<int>(state.modelInstances.size())) {
-    ModelInstance& treeInstance = state.modelInstances[state.treeInstanceIndex];
-    float treeScale = treeInstance.scale.x;
-    if (ImGui::SliderFloat("Tree Scale", &treeScale, 0.001f, 0.010f)) {
-      treeInstance.scale = glm::vec3(treeScale);
+  if (ImGui::SliderFloat("Tree Render Radius", &state.treeRenderRadius, 5.0f,
+                         state.renderDistance)) {
+    state.treeInstanceDirty = true;
+  }
+  if (ImGui::SliderFloat("Tree Update Distance", &state.treeUpdateDistance,
+                         1.0f, 50.0f)) {
+    state.treeInstanceDirty = true;
+  }
+  if (state.treeAssetIndex >= 0) {
+    float treeScale = 0.0f;
+    bool foundTree = false;
+    for (const ModelInstance& instance : state.modelInstances) {
+      if (instance.assetIndex == state.treeAssetIndex) {
+        treeScale = instance.scale.x;
+        foundTree = true;
+        break;
+      }
+    }
+    if (foundTree) {
+      if (ImGui::SliderFloat("Tree Scale", &treeScale, 0.001f, 0.010f)) {
+        for (ModelInstance& instance : state.modelInstances) {
+          if (instance.assetIndex == state.treeAssetIndex) {
+            instance.scale = glm::vec3(treeScale);
+          }
+        }
+        state.treeInstanceDirty = true;
+      }
     }
   }
   if (state.treeAssetIndex >= 0 &&

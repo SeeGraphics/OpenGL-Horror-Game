@@ -40,13 +40,19 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glGenVertexArrays(1, &state.VAO);
   glGenBuffers(1, &state.VBO);
   glGenBuffers(1, &state.EBO);
-  glGenBuffers(1, &state.instancedVBO);
   glBindVertexArray(state.VAO);
 
-  // cube geometry
+  buildFloor(state);
+
+  // terrain geometry
   glBindBuffer(GL_ARRAY_BUFFER, state.VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(CubeVertices), CubeVertices,
-               GL_STATIC_DRAW);
+  glBufferData(GL_ARRAY_BUFFER,
+               state.terrainVertices.size() * sizeof(float),
+               state.terrainVertices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               state.terrainIndices.size() * sizeof(unsigned int),
+               state.terrainIndices.data(), GL_STATIC_DRAW);
 
   // position attribute
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -61,23 +67,6 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                         (void*)(6 * sizeof(float)));
   glEnableVertexAttribArray(1);
-
-  buildFloor(state);
-
-  glBindBuffer(GL_ARRAY_BUFFER, state.instancedVBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               state.modelMatrices.size() * sizeof(glm::mat4),
-               state.modelMatrices.data(), GL_STATIC_DRAW);
-
-  // Mat4 takes up 4 attribute slots (e.g., locations 3, 4, 5, and 6)
-  for (int i = 0; i < 4; i++) {
-    glEnableVertexAttribArray(3 + i);
-    glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)(sizeof(glm::vec4) * i));
-
-    // Tell OpenGL this is per-instance data, not per-vertex
-    glVertexAttribDivisor(3 + i, 1);
-  }
 
   glBindVertexArray(0);
 
@@ -208,7 +197,9 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   // render container
   glPolygonMode(GL_FRONT_AND_BACK, state.wireframe ? GL_LINE : GL_FILL);
   glBindVertexArray(state.VAO);
-  glDrawArraysInstanced(GL_TRIANGLES, 0, 36, state.modelMatrices.size());
+  glDrawElements(GL_TRIANGLES,
+                 static_cast<GLsizei>(state.terrainIndices.size()),
+                 GL_UNSIGNED_INT, 0);
 
   // Skybox
   glDepthFunc(GL_LEQUAL);  // disable depth buffer (skybox is at depth 1.0)
@@ -234,7 +225,6 @@ void renderShutdown(AppState& state) {
   if (state.skyboxVAO) glDeleteVertexArrays(1, &state.skyboxVAO);
   if (state.VBO) glDeleteBuffers(1, &state.VBO);
   if (state.EBO) glDeleteBuffers(1, &state.EBO);
-  if (state.instancedVBO) glDeleteBuffers(1, &state.instancedVBO);
   if (state.skyboxVBO) glDeleteBuffers(1, &state.skyboxVBO);
   if (state.texture) glDeleteTextures(1, &state.texture);
   if (state.cubemapTexture) glDeleteTextures(1, &state.cubemapTexture);

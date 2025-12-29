@@ -47,13 +47,13 @@ struct AppState {
   unsigned int VBO = 0;
   unsigned int VAO = 0;
   unsigned int EBO = 0;
-  unsigned int instancedVBO = 0;
   unsigned int skyboxVAO = 0;
   unsigned int skyboxVBO = 0;
   unsigned int cubemapTexture = 0;
   unsigned int texture = 0;
 
-  std::vector<glm::mat4> modelMatrices;
+  std::vector<float> terrainVertices;
+  std::vector<unsigned int> terrainIndices;
 };
 
 bool AppInit(AppState& state, GLFWwindow* window);

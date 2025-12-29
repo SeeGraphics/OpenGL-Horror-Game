@@ -54,7 +54,24 @@ void drawDebugUi(AppState& state) {
   if (ImGui::SliderFloat("Heightmap Scale", &state.heightmapScale, 0.0f,
                          50.0f)) {
     state.terrainDirty = true;
+    state.grassDirty = true;
   }
+  if (ImGui::SliderFloat("Grass Density", &state.grassDensity, 0.0f, 5.0f)) {
+    state.grassDirty = true;
+  }
+  if (ImGui::SliderFloat("Grass Near Radius", &state.grassNearRadius, 0.0f,
+                         state.renderDistance)) {
+    state.grassDirty = true;
+  }
+  if (ImGui::SliderFloat("Grass Far Radius", &state.grassFarRadius, 0.0f,
+                         state.renderDistance)) {
+    state.grassDirty = true;
+  }
+  if (ImGui::SliderFloat("Grass Mid Density", &state.grassMidDensity, 0.0f,
+                         1.0f)) {
+    state.grassDirty = true;
+  }
+  ImGui::SliderFloat("Grass Intensity", &state.grassIntensity, 0.0f, 1.0f);
   ImGui::SliderFloat("Skybox Intensity", &state.skyboxIntensity, 0.0f, 1.0f);
   ImGui::End();
 

@@ -18,6 +18,7 @@
 
 static unsigned int loadCubemap(const std::vector<std::string>& faces);
 static void uploadTerrainBuffers(AppState& state);
+static void uploadGrassInstances(AppState& state);
 
 bool renderInit(AppState& state, GLFWwindow* window) {
   (void)window;
@@ -32,10 +33,13 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   // glCullFace(GL_BACK);
   // glFrontFace(GL_CCW);
   glEnable(GL_DEPTH_TEST);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
   // build and compile shader programs
   state.worldShader = new Shader("Shader/default.vs", "Shader/default.fs");
   state.skyboxShader = new Shader("Shader/skybox.vs", "Shader/skybox.fs");
+  state.grassShader = new Shader("Shader/grass.vs", "Shader/grass.fs");
 
   // regular buffers
   glGenVertexArrays(1, &state.VAO);
@@ -64,6 +68,52 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glEnableVertexAttribArray(1);
 
   glBindVertexArray(0);
+
+  // grass geometry
+  float grassWidth = state.cubeScale * 0.6f;
+  float grassHeight = state.cubeScale * 0.9f;
+  float halfWidth = grassWidth * 0.5f;
+  float grassVertices[] = {
+      -halfWidth, 0.0f,      0.0f, 0.0f, 0.0f,  // quad A
+      halfWidth,  0.0f,      0.0f, 1.0f, 0.0f,
+      halfWidth,  grassHeight, 0.0f, 1.0f, 1.0f,
+      -halfWidth, grassHeight, 0.0f, 0.0f, 1.0f,
+      0.0f,       0.0f,     -halfWidth, 0.0f, 0.0f,  // quad B
+      0.0f,       0.0f,      halfWidth, 1.0f, 0.0f,
+      0.0f,       grassHeight, halfWidth, 1.0f, 1.0f,
+      0.0f,       grassHeight, -halfWidth, 0.0f, 1.0f};
+  unsigned int grassIndices[] = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
+  state.grassIndexCount = static_cast<int>(
+      sizeof(grassIndices) / sizeof(grassIndices[0]));
+
+  glGenVertexArrays(1, &state.grassVAO);
+  glGenBuffers(1, &state.grassVBO);
+  glGenBuffers(1, &state.grassEBO);
+  glGenBuffers(1, &state.grassInstanceVBO);
+
+  glBindVertexArray(state.grassVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, state.grassVBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(grassVertices), grassVertices,
+               GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.grassEBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(grassIndices), grassIndices,
+               GL_STATIC_DRAW);
+
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
+                        (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
+
+  glBindBuffer(GL_ARRAY_BUFFER, state.grassInstanceVBO);
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+  glEnableVertexAttribArray(3);
+  glVertexAttribDivisor(3, 1);
+  glBindVertexArray(0);
+
+  buildGrass(state);
+  uploadGrassInstances(state);
+  state.grassDirty = false;
 
   // skybox
   glGenVertexArrays(1, &state.skyboxVAO);
@@ -106,6 +156,30 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   }
   stbi_image_free(data);
 
+  // load grass texture
+  glGenTextures(1, &state.grassTexture);
+  glBindTexture(GL_TEXTURE_2D, state.grassTexture);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                  GL_LINEAR_MIPMAP_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  int grassWidthPx, grassHeightPx, grassChannels;
+  stbi_set_flip_vertically_on_load(true);
+  unsigned char* grassData = stbi_load("assets/environment/grass_blades.png",
+                                       &grassWidthPx, &grassHeightPx,
+                                       &grassChannels, 0);
+  stbi_set_flip_vertically_on_load(false);
+  if (grassData) {
+    GLenum format = (grassChannels == 4) ? GL_RGBA : GL_RGB;
+    glTexImage2D(GL_TEXTURE_2D, 0, format, grassWidthPx, grassHeightPx, 0,
+                 format, GL_UNSIGNED_BYTE, grassData);
+    glGenerateMipmap(GL_TEXTURE_2D);
+  } else {
+    std::cout << "Failed to load grass texture" << std::endl;
+  }
+  stbi_image_free(grassData);
+
   return true;
 }
 
@@ -114,6 +188,23 @@ void renderFrame(AppState& state, GLFWwindow* window) {
     buildFloor(state);
     uploadTerrainBuffers(state);
     state.terrainDirty = false;
+    state.grassDirty = true;
+  }
+
+  float grassUpdateDistance = state.cubeScale * 2.0f;
+  float grassDx = state.camera.cameraPos.x - state.grassCenter.x;
+  float grassDz = state.camera.cameraPos.z - state.grassCenter.y;
+  float grassMoveSq =
+      (grassDx * grassDx) + (grassDz * grassDz);
+  float grassUpdateSq = grassUpdateDistance * grassUpdateDistance;
+  if (grassMoveSq > grassUpdateSq) {
+    state.grassDirty = true;
+  }
+
+  if (state.grassDirty) {
+    buildGrass(state);
+    uploadGrassInstances(state);
+    state.grassDirty = false;
   }
 
   glClearColor(state.fogColor.x, state.fogColor.y, state.fogColor.z, 1.0f);
@@ -202,6 +293,51 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                  static_cast<GLsizei>(state.terrainIndices.size()),
                  GL_UNSIGNED_INT, 0);
 
+  if (!state.grassInstances.empty()) {
+    state.grassShader->use();
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "viewPos"), 1,
+                 glm::value_ptr(state.camera.cameraPos));
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "lightDir"), 1,
+                 glm::value_ptr(moonDirNorm));
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "lightColor"), 1,
+                 glm::value_ptr(state.moonColor));
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "ambientStrength"),
+                state.ambientStrength);
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "diffuseStrength"),
+                state.diffuseStrength);
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotPos"), 1,
+                 glm::value_ptr(flashlightPos));
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotDir"), 1,
+                 glm::value_ptr(flashlightDir));
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotColor"), 1,
+                 glm::value_ptr(state.flashlightColor));
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "spotIntensity"),
+                spotIntensity);
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "spotInnerCutoff"),
+                flashlightInnerCutoff);
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "spotOuterCutoff"),
+                flashlightOuterCutoff);
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "grassIntensity"),
+                state.grassIntensity);
+    glUniform3fv(glGetUniformLocation(state.grassShader->ID, "fogColor"), 1,
+                 glm::value_ptr(state.fogColor));
+    glUniform1f(glGetUniformLocation(state.grassShader->ID, "fogDensity"),
+                state.fogDensity);
+    glUniformMatrix4fv(glGetUniformLocation(state.grassShader->ID, "view"), 1,
+                       GL_FALSE, glm::value_ptr(view));
+    glUniformMatrix4fv(
+        glGetUniformLocation(state.grassShader->ID, "projection"), 1, GL_FALSE,
+        glm::value_ptr(projection));
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, state.grassTexture);
+    glUniform1i(glGetUniformLocation(state.grassShader->ID, "grassTexture"), 0);
+    glBindVertexArray(state.grassVAO);
+    glDrawElementsInstanced(GL_TRIANGLES, state.grassIndexCount,
+                            GL_UNSIGNED_INT, 0,
+                            static_cast<GLsizei>(state.grassInstances.size()));
+  }
+
   // Skybox
   glDepthFunc(GL_LEQUAL);  // disable depth buffer (skybox is at depth 1.0)
   state.skyboxShader->use();
@@ -231,11 +367,18 @@ void renderShutdown(AppState& state) {
   if (state.skyboxVBO) glDeleteBuffers(1, &state.skyboxVBO);
   if (state.texture) glDeleteTextures(1, &state.texture);
   if (state.cubemapTexture) glDeleteTextures(1, &state.cubemapTexture);
+  if (state.grassTexture) glDeleteTextures(1, &state.grassTexture);
+  if (state.grassVAO) glDeleteVertexArrays(1, &state.grassVAO);
+  if (state.grassVBO) glDeleteBuffers(1, &state.grassVBO);
+  if (state.grassEBO) glDeleteBuffers(1, &state.grassEBO);
+  if (state.grassInstanceVBO) glDeleteBuffers(1, &state.grassInstanceVBO);
 
   delete state.worldShader;
   state.worldShader = nullptr;
   delete state.skyboxShader;
   state.skyboxShader = nullptr;
+  delete state.grassShader;
+  state.grassShader = nullptr;
 }
 
 static unsigned int loadCubemap(const std::vector<std::string>& faces) {
@@ -276,5 +419,14 @@ static void uploadTerrainBuffers(AppState& state) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,
                state.terrainIndices.size() * sizeof(unsigned int),
                state.terrainIndices.data(), GL_STATIC_DRAW);
+  glBindVertexArray(0);
+}
+
+static void uploadGrassInstances(AppState& state) {
+  glBindVertexArray(state.grassVAO);
+  glBindBuffer(GL_ARRAY_BUFFER, state.grassInstanceVBO);
+  glBufferData(GL_ARRAY_BUFFER,
+               state.grassInstances.size() * sizeof(glm::vec3),
+               state.grassInstances.data(), GL_STATIC_DRAW);
   glBindVertexArray(0);
 }

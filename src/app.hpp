@@ -34,6 +34,13 @@ struct AppState {
   glm::vec3 fogColor = glm::vec3(0.02f, 0.02f, 0.03f);
   float heightmapScale = 40.0f;
   bool terrainDirty = true;
+  float grassDensity = 0.05f;
+  float grassIntensity = 0.4f;
+  float grassNearRadius = 35.0f;
+  float grassFarRadius = 90.0f;
+  float grassMidDensity = 0.35f;
+  bool grassDirty = true;
+  glm::vec2 grassCenter = glm::vec2(0.0f);
   float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
 
   bool fullscreen = true;
@@ -45,6 +52,7 @@ struct AppState {
 
   Shader* worldShader = nullptr;
   Shader* skyboxShader = nullptr;
+  Shader* grassShader = nullptr;
 
   unsigned int VBO = 0;
   unsigned int VAO = 0;
@@ -53,9 +61,16 @@ struct AppState {
   unsigned int skyboxVBO = 0;
   unsigned int cubemapTexture = 0;
   unsigned int texture = 0;
+  unsigned int grassVAO = 0;
+  unsigned int grassVBO = 0;
+  unsigned int grassEBO = 0;
+  unsigned int grassInstanceVBO = 0;
+  unsigned int grassTexture = 0;
+  int grassIndexCount = 0;
 
   std::vector<float> terrainVertices;
   std::vector<unsigned int> terrainIndices;
+  std::vector<glm::vec3> grassInstances;
 };
 
 bool AppInit(AppState& state, GLFWwindow* window);

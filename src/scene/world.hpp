@@ -4,6 +4,7 @@
 struct AppState;
 
 void buildFloor(AppState& state);
+void buildGrass(AppState& state);
 void updateGroundCollision(AppState& state);
 
 #endif

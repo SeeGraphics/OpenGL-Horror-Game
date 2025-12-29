@@ -21,6 +21,16 @@ static float clampFloat(float value, float minValue, float maxValue) {
   return value;
 }
 
+static float hashToUnitFloat(int x, int z, int seed) {
+  unsigned int h = static_cast<unsigned int>(x);
+  h = h * 374761393u + static_cast<unsigned int>(z) * 668265263u;
+  h ^= static_cast<unsigned int>(seed) * 1274126177u;
+  h ^= h >> 13;
+  h *= 1274126177u;
+  h ^= h >> 16;
+  return (h & 0x00FFFFFF) / 16777216.0f;
+}
+
 static bool loadHeightmap() {
   if (heightmapLoaded || heightmapFailed) {
     return heightmapLoaded;
@@ -196,6 +206,113 @@ void buildFloor(AppState& state) {
       state.terrainIndices.push_back(topRight);
       state.terrainIndices.push_back(bottomRight);
       state.terrainIndices.push_back(bottomLeft);
+    }
+  }
+}
+
+void buildGrass(AppState& state) {
+  int gridSize = state.floorSize * 2;
+  float tileSize = state.cubeScale;
+  float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;
+  float density = state.grassDensity;
+  if (density < 0.0f) density = 0.0f;
+
+  state.grassInstances.clear();
+
+  if (density <= 0.0f) {
+    return;
+  }
+
+  float nearRadius = state.grassNearRadius;
+  float farRadius = state.grassFarRadius;
+  if (nearRadius < 0.0f) nearRadius = 0.0f;
+  if (farRadius < nearRadius) farRadius = nearRadius;
+
+  if (farRadius <= 0.0f) {
+    return;
+  }
+
+  float centerX = state.camera.cameraPos.x;
+  float centerZ = state.camera.cameraPos.z;
+  state.grassCenter = glm::vec2(centerX, centerZ);
+
+  float minXf = ((centerX - farRadius) - start) / tileSize - 0.5f;
+  float maxXf = ((centerX + farRadius) - start) / tileSize - 0.5f;
+  float minZf = ((centerZ - farRadius) - start) / tileSize - 0.5f;
+  float maxZf = ((centerZ + farRadius) - start) / tileSize - 0.5f;
+  int minX = static_cast<int>(std::floor(minXf));
+  int maxX = static_cast<int>(std::floor(maxXf));
+  int minZ = static_cast<int>(std::floor(minZf));
+  int maxZ = static_cast<int>(std::floor(maxZf));
+
+  if (minX < 0) minX = 0;
+  if (minZ < 0) minZ = 0;
+  if (maxX > gridSize - 1) maxX = gridSize - 1;
+  if (maxZ > gridSize - 1) maxZ = gridSize - 1;
+
+  if (minX > maxX || minZ > maxZ) {
+    return;
+  }
+
+  int maxInstancesPerTile = static_cast<int>(std::ceil(density));
+  size_t tileCount =
+      static_cast<size_t>(maxX - minX + 1) * static_cast<size_t>(maxZ - minZ + 1);
+  state.grassInstances.reserve(tileCount *
+                               static_cast<size_t>(maxInstancesPerTile));
+
+  float nearRadiusSq = nearRadius * nearRadius;
+  float farRadiusSq = farRadius * farRadius;
+  float falloffSpan = farRadius - nearRadius;
+
+  for (int z = minZ; z <= maxZ; ++z) {
+    float tileCenterZ = start + (static_cast<float>(z) + 0.5f) * tileSize;
+    for (int x = minX; x <= maxX; ++x) {
+      float tileCenterX = start + (static_cast<float>(x) + 0.5f) * tileSize;
+      float dx = tileCenterX - centerX;
+      float dz = tileCenterZ - centerZ;
+      float distSq = dx * dx + dz * dz;
+
+      if (distSq > farRadiusSq) {
+        continue;
+      }
+
+      float densityScale = 1.0f;
+      if (distSq > nearRadiusSq && falloffSpan > 0.0f) {
+        float distance = std::sqrt(distSq);
+        float t = (distance - nearRadius) / falloffSpan;
+        if (t < 0.0f) t = 0.0f;
+        if (t > 1.0f) t = 1.0f;
+        densityScale = 1.0f + (state.grassMidDensity - 1.0f) * t;
+      }
+
+      float tileDensity = density * densityScale;
+      if (tileDensity <= 0.0f) {
+        continue;
+      }
+
+      int baseCount = static_cast<int>(std::floor(tileDensity));
+      float extraChance = tileDensity - static_cast<float>(baseCount);
+      int instanceCount = baseCount;
+      if (extraChance > 0.0f) {
+        float roll = hashToUnitFloat(x, z, 3);
+        if (roll < extraChance) {
+          instanceCount += 1;
+        }
+      }
+
+      if (instanceCount == 0) {
+        continue;
+      }
+
+      for (int i = 0; i < instanceCount; ++i) {
+        int seedBase = 10 + (i * 2);
+        float offsetX = (hashToUnitFloat(x, z, seedBase) - 0.5f) * tileSize;
+        float offsetZ = (hashToUnitFloat(x, z, seedBase + 1) - 0.5f) * tileSize;
+        float xPos = tileCenterX + offsetX;
+        float zPos = tileCenterZ + offsetZ;
+        float yPos = getTerrainHeightAt(state, xPos, zPos);
+        state.grassInstances.push_back(glm::vec3(xPos, yPos + 0.01f, zPos));
+      }
     }
   }
 }

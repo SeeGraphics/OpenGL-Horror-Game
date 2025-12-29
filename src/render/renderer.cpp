@@ -17,6 +17,7 @@
 #include "render/shader.hpp"
 
 static unsigned int loadCubemap(const std::vector<std::string>& faces);
+static void uploadTerrainBuffers(AppState& state);
 
 bool renderInit(AppState& state, GLFWwindow* window) {
   (void)window;
@@ -27,9 +28,9 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   }
 
   // culling
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glFrontFace(GL_CCW);
+  // glEnable(GL_CULL_FACE);
+  // glCullFace(GL_BACK);
+  // glFrontFace(GL_CCW);
   glEnable(GL_DEPTH_TEST);
 
   // build and compile shader programs
@@ -43,16 +44,10 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glBindVertexArray(state.VAO);
 
   buildFloor(state);
+  uploadTerrainBuffers(state);
+  state.terrainDirty = false;
 
-  // terrain geometry
-  glBindBuffer(GL_ARRAY_BUFFER, state.VBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               state.terrainVertices.size() * sizeof(float),
-               state.terrainVertices.data(), GL_STATIC_DRAW);
-  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.EBO);
-  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-               state.terrainIndices.size() * sizeof(unsigned int),
-               state.terrainIndices.data(), GL_STATIC_DRAW);
+  glBindVertexArray(state.VAO);
 
   // position attribute
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
@@ -115,6 +110,12 @@ bool renderInit(AppState& state, GLFWwindow* window) {
 }
 
 void renderFrame(AppState& state, GLFWwindow* window) {
+  if (state.terrainDirty) {
+    buildFloor(state);
+    uploadTerrainBuffers(state);
+    state.terrainDirty = false;
+  }
+
   glClearColor(state.fogColor.x, state.fogColor.y, state.fogColor.z, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -213,6 +214,8 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glUniformMatrix4fv(
       glGetUniformLocation(state.skyboxShader->ID, "projection"), 1, GL_FALSE,
       glm::value_ptr(projection));
+  glUniform1f(glGetUniformLocation(state.skyboxShader->ID, "skyboxIntensity"),
+              state.skyboxIntensity);
 
   glBindVertexArray(state.skyboxVAO);
   glBindTexture(GL_TEXTURE_CUBE_MAP, state.cubemapTexture);
@@ -261,4 +264,17 @@ static unsigned int loadCubemap(const std::vector<std::string>& faces) {
   glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
   return textureID;
+}
+
+static void uploadTerrainBuffers(AppState& state) {
+  glBindVertexArray(state.VAO);
+  glBindBuffer(GL_ARRAY_BUFFER, state.VBO);
+  glBufferData(GL_ARRAY_BUFFER,
+               state.terrainVertices.size() * sizeof(float),
+               state.terrainVertices.data(), GL_STATIC_DRAW);
+  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.EBO);
+  glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+               state.terrainIndices.size() * sizeof(unsigned int),
+               state.terrainIndices.data(), GL_STATIC_DRAW);
+  glBindVertexArray(0);
 }

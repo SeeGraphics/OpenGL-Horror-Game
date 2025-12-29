@@ -25,8 +25,11 @@ void beginDebugUiFrame() {
 void drawDebugUi(AppState& state) {
   ImGuiIO& io = ImGui::GetIO();
 
-  ImGui::Begin("FPS");
-  ImGui::Text("%.f", io.Framerate);
+  ImGui::Begin("Info");
+  ImGui::Text("FPS: %.f", io.Framerate);
+  ImGui::Text("Player X: %.2f", state.camera.cameraPos.x);
+  ImGui::Text("Player Y: %.2f", state.camera.cameraPos.y);
+  ImGui::Text("Player Z: %.2f", state.camera.cameraPos.z);
   ImGui::End();
 
   ImGui::Begin("Settings");
@@ -43,11 +46,16 @@ void drawDebugUi(AppState& state) {
   ImGui::SliderFloat("Diffuse", &state.diffuseStrength, 0.01f, 10.0f);
   ImGui::SliderFloat("Specular", &state.specularStrength, 0.01f, 10.0f);
   ImGui::SliderFloat("Shininess", &state.shininess, 1.0f, 100.0f);
-  ImGui::SliderFloat("Flashlight Brightness", &state.flashlightBrightness,
-                     0.0f, 10.0f);
+  ImGui::SliderFloat("Flashlight Brightness", &state.flashlightBrightness, 0.0f,
+                     10.0f);
   ImGui::SliderFloat("Flashlight Radius (deg)", &state.flashlightRadius, 1.0f,
                      60.0f);
-  ImGui::SliderFloat("Fog", &state.fogDensity, 0.005f, 0.50f);
+  ImGui::SliderFloat("Fog", &state.fogDensity, 0.0f, 0.50f);
+  if (ImGui::SliderFloat("Heightmap Scale", &state.heightmapScale, 0.0f,
+                         50.0f)) {
+    state.terrainDirty = true;
+  }
+  ImGui::SliderFloat("Skybox Intensity", &state.skyboxIntensity, 0.0f, 1.0f);
   ImGui::End();
 
   ImGui::Begin("Audio");

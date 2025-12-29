@@ -15,10 +15,8 @@ inline constexpr int soundCount = static_cast<int>(SoundId::Count);
 
 struct AudioPaths {
   const char* sounds[soundCount] = {
-      "assets/sounds/flashlightToggle.mp3",
-      "assets/sounds/running_grass.mp3",
-      "assets/sounds/step_on_grass.mp3",
-      "assets/sounds/landing_on_grass.mp3"};
+      "assets/sounds/flashlightToggle.mp3", "assets/sounds/running_grass.mp3",
+      "assets/sounds/step_on_grass.mp3", "assets/sounds/landing_on_grass.mp3"};
 };
 
 struct AudioSystem {
@@ -26,7 +24,7 @@ struct AudioSystem {
   ma_sound sounds[soundCount];
   AudioPaths paths;
   bool initialized = false;
-  float masterVolume = 0.8f;
+  float masterVolume = 0.03f;
 };
 
 bool initAudio(AudioSystem& audio);

@@ -1,9 +1,8 @@
 #ifndef APP_HPP
 #define APP_HPP
 
-#include <vector>
-
 #include <glm/glm.hpp>
+#include <vector>
 
 #include "audio/audio.hpp"
 #include "scene/camera.hpp"
@@ -17,12 +16,12 @@ struct AppState {
   float deltaTime = 0.0f;
   float lastFrame = 0.0f;
 
-  int floorSize = 100;
+  int floorSize = 500;
   float floorY = -1.0f;
 
-  float renderDistance = 500.0f;
+  float renderDistance = 1000.0f;
 
-  float ambientStrength = 0.05f;
+  float ambientStrength = 1.55f;  // dark: 0.05f, increased for testing
   float diffuseStrength = 0.35f;
   float specularStrength = 0.010f;  // get rid of those circles on the floor
   float shininess = 32.0f;
@@ -33,6 +32,9 @@ struct AppState {
   glm::vec3 flashlightColor = glm::vec3(1.0f, 0.95f, 0.85f);
   float fogDensity = 0.02f;
   glm::vec3 fogColor = glm::vec3(0.02f, 0.02f, 0.03f);
+  float heightmapScale = 40.0f;
+  bool terrainDirty = true;
+  float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
 
   bool fullscreen = true;
   bool wireframe = false;

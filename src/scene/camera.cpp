@@ -26,8 +26,7 @@ bool Cooldown::TryUse() {
 Camera::Camera() {
   cameraHeight = 1.5f;  // eye level, changable (e.g crouching)
 
-  cameraPos = glm::vec3(0.0f, 0.5f,
-                        3.0f);  // spawn at floor level (1.5 - 1.0 = 0.5)
+  cameraPos = glm::vec3(5.95f, 8.45f, -8.16f);
   cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
   flatFront = glm::normalize(glm::vec3(cameraFront.x, 0.0f, cameraFront.z));
   cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);

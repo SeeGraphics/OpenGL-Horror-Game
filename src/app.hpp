@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "camera.hpp"
+#include "scene/camera.hpp"
 
 class Shader;
 struct GLFWwindow;

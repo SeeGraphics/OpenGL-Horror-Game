@@ -27,7 +27,9 @@ void run_cmd(const std::string& cmd) {
 int main(int argc, char** argv) {
   std::string cxx = "clang++", cc = "clang";
   std::string inc =
-      "-I./include -I./imgui -I./imgui/backends -I/opt/homebrew/include";
+      "-I./src -I./third_party/imgui -I./third_party/imgui/backends "
+      "-I./third_party/glad/include -I./third_party/stb "
+      "-I/opt/homebrew/include";
   std::string lib =
       "-L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa "
       "-framework IOKit -framework CoreVideo";
@@ -36,28 +38,28 @@ int main(int argc, char** argv) {
   run_cmd("mkdir -p build");
 
   // GLAD (C)
-  if (needs_rebuild("src/glad.c", "build/glad.o")) {
-    run_cmd(
-        cc +
-        " -c src/glad.c -o build/glad.o -I./include -I/opt/homebrew/include");
+  if (needs_rebuild("third_party/glad/src/glad.c", "build/glad.o")) {
+    run_cmd(cc + " -c third_party/glad/src/glad.c -o build/glad.o " + inc);
   }
 
   // ImGui & Project Files (C++)
   std::vector<std::pair<std::string, std::string>> files = {
-      {"imgui/imgui.cpp", "build/imgui.o"},
-      {"imgui/imgui_draw.cpp", "build/imgui_draw.o"},
-      {"imgui/imgui_widgets.cpp", "build/imgui_widgets.o"},
-      {"imgui/imgui_tables.cpp", "build/imgui_tables.o"},
-      {"imgui/backends/imgui_impl_glfw.cpp", "build/imgui_impl_glfw.o"},
-      {"imgui/backends/imgui_impl_opengl3.cpp", "build/imgui_impl_opengl3.o"},
+      {"third_party/imgui/imgui.cpp", "build/imgui.o"},
+      {"third_party/imgui/imgui_draw.cpp", "build/imgui_draw.o"},
+      {"third_party/imgui/imgui_widgets.cpp", "build/imgui_widgets.o"},
+      {"third_party/imgui/imgui_tables.cpp", "build/imgui_tables.o"},
+      {"third_party/imgui/backends/imgui_impl_glfw.cpp",
+       "build/imgui_impl_glfw.o"},
+      {"third_party/imgui/backends/imgui_impl_opengl3.cpp",
+       "build/imgui_impl_opengl3.o"},
       {"src/app.cpp", "build/app.o"},
       {"src/ui/debugUi.cpp", "build/debugUi.o"},
       {"src/render/renderer.cpp", "build/renderer.o"},
-      {"src/game/world.cpp", "build/world.o"},
+      {"src/scene/world.cpp", "build/world.o"},
       {"src/main.cpp", "build/main.o"},
-      {"src/camera.cpp", "build/camera.o"},
-      {"src/shader.cpp", "build/shader.o"},
-      {"src/stb_image.cpp", "build/stb_image.o"}};
+      {"src/scene/camera.cpp", "build/camera.o"},
+      {"src/render/shader.cpp", "build/shader.o"},
+      {"third_party/stb/stb_image.cpp", "build/stb_image.o"}};
 
   std::string all_objs = "build/glad.o ";
   for (const auto& file : files) {

@@ -1,10 +1,9 @@
 #define GL_SILENCE_DEPRECATION
 // clang-format off
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 // clang-format on
 #include "app.hpp"
-#include "game/world.hpp"
+#include "scene/world.hpp"
 #include "render/renderer.hpp"
 #include "ui/debugUi.hpp"
 

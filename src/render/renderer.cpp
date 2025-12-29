@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "app.hpp"
-#include "game/world.hpp"
+#include "scene/world.hpp"
 #include "primitives.hpp"
-#include "shader.hpp"
+#include "render/shader.hpp"
 
 static unsigned int loadCubemap(const std::vector<std::string>& faces);
 

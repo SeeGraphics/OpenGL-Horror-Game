@@ -12,7 +12,6 @@
 
 static bool heightmapLoaded = false;
 static bool heightmapFailed = false;
-static bool heightmapLogged = false;
 static int heightmapWidth = 0;
 static int heightmapHeight = 0;
 static std::vector<unsigned short> heightmapData;
@@ -148,7 +147,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
   }
 
   state.treeInstanceDirty = true;
-  std::cout << "Trees spawned: " << spawned << std::endl;
+  (void)spawned;
 }
 
 static void resolveTreeCollisions(AppState& state) {
@@ -207,19 +206,6 @@ static bool loadHeightmap() {
   heightmapData.assign(data, data + (heightmapWidth * heightmapHeight));
   stbi_image_free(data);
   heightmapLoaded = true;
-
-  if (!heightmapLogged) {
-    unsigned short minValue = 65535;
-    unsigned short maxValue = 0;
-    for (unsigned short value : heightmapData) {
-      if (value < minValue) minValue = value;
-      if (value > maxValue) maxValue = value;
-    }
-    std::cout << "Heightmap loaded: " << heightmapWidth << "x"
-              << heightmapHeight << " min=" << minValue << " max=" << maxValue
-              << std::endl;
-    heightmapLogged = true;
-  }
 
   return true;
 }

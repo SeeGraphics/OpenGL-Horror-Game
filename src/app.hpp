@@ -53,6 +53,7 @@ struct AppState {
   bool fullscreen = true;
   bool wireframe = false;
   bool freeCam = false;
+  bool showDebugUi = true;
 
   Camera camera;
   AudioSystem audio;

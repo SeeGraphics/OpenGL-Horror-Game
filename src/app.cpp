@@ -56,8 +56,10 @@ void AppFrame(AppState& state, GLFWwindow* window) {
     state.camera.flashlightToggled = false;
   }
 
-  beginDebugUiFrame();
-  drawDebugUi(state);
+  if (state.showDebugUi) {
+    beginDebugUiFrame();
+    drawDebugUi(state);
+  }
 
   updateGroundCollision(state);
 
@@ -83,7 +85,9 @@ void AppFrame(AppState& state, GLFWwindow* window) {
   renderFrame(state, window);
 
   // render imgui
-  endDebugUiFrame();
+  if (state.showDebugUi) {
+    endDebugUiFrame();
+  }
 
   // glfw: swap buffers and poll IO events
   glfwSwapBuffers(window);
@@ -142,6 +146,17 @@ static void processInput(GLFWwindow* window) {
     pWasDown = true;
   } else {
     pWasDown = false;
+  }
+
+  // toggle debug UI
+  static bool gWasDown = false;
+  if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS) {
+    if (!gWasDown) {
+      state.showDebugUi = !state.showDebugUi;
+    }
+    gWasDown = true;
+  } else {
+    gWasDown = false;
   }
 }
 

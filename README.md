@@ -12,6 +12,7 @@ Abandoned buildings and other interesting models are scattered throughout the fo
 
 ## Current State - Progress
 ![Showcase](images/showcase.png)
+![Debug](images/debug.png)
 
 ## How to Build
 You can build simply via the nob.cpp (nobuild).

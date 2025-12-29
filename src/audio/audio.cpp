@@ -35,6 +35,8 @@ bool initAudio(AudioSystem& audio) {
       &audio.sounds[static_cast<int>(SoundId::RunningGrass)], MA_TRUE);
   ma_sound_set_looping(
       &audio.sounds[static_cast<int>(SoundId::StepOnGrass)], MA_TRUE);
+  ma_sound_set_looping(
+      &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], MA_TRUE);
 
   audio.initialized = true;
   ma_engine_set_volume(&audio.engine, audio.masterVolume);

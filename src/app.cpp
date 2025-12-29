@@ -38,6 +38,8 @@ bool AppInit(AppState& state, GLFWwindow* window) {
 }
 
 void AppFrame(AppState& state, GLFWwindow* window) {
+  static bool wasGrounded = true;
+
   // calculate delta time
   float currentFrame = glfwGetTime();
   state.deltaTime = currentFrame - state.lastFrame;
@@ -55,6 +57,25 @@ void AppFrame(AppState& state, GLFWwindow* window) {
   drawDebugUi(state);
 
   updateGroundCollision(state);
+
+  if (!state.freeCam && !wasGrounded && state.camera.isGrounded) {
+    playSound(state.audio, SoundId::LandingOnGrass);
+  }
+
+  if (!state.freeCam && state.camera.isGrounded && state.camera.isMoving) {
+    if (state.camera.isSprinting) {
+      startLoopingSound(state.audio, SoundId::RunningGrass);
+      stopSound(state.audio, SoundId::StepOnGrass);
+    } else {
+      startLoopingSound(state.audio, SoundId::StepOnGrass);
+      stopSound(state.audio, SoundId::RunningGrass);
+    }
+  } else {
+    stopSound(state.audio, SoundId::RunningGrass);
+    stopSound(state.audio, SoundId::StepOnGrass);
+  }
+
+  wasGrounded = state.camera.isGrounded;
 
   renderFrame(state, window);
 

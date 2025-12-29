@@ -31,6 +31,11 @@ bool initAudio(AudioSystem& audio) {
     }
   }
 
+  ma_sound_set_looping(
+      &audio.sounds[static_cast<int>(SoundId::RunningGrass)], MA_TRUE);
+  ma_sound_set_looping(
+      &audio.sounds[static_cast<int>(SoundId::StepOnGrass)], MA_TRUE);
+
   audio.initialized = true;
   ma_engine_set_volume(&audio.engine, audio.masterVolume);
   return true;
@@ -76,4 +81,27 @@ void playSound(AudioSystem& audio, SoundId soundId) {
 
   ma_sound_seek_to_pcm_frame(&sound, 0);
   ma_sound_start(&sound);
+}
+
+void startLoopingSound(AudioSystem& audio, SoundId soundId) {
+  if (!audio.initialized) {
+    return;
+  }
+
+  ma_sound& sound = audio.sounds[static_cast<int>(soundId)];
+  if (!ma_sound_is_playing(&sound)) {
+    ma_sound_seek_to_pcm_frame(&sound, 0);
+    ma_sound_start(&sound);
+  }
+}
+
+void stopSound(AudioSystem& audio, SoundId soundId) {
+  if (!audio.initialized) {
+    return;
+  }
+
+  ma_sound& sound = audio.sounds[static_cast<int>(soundId)];
+  if (ma_sound_is_playing(&sound)) {
+    ma_sound_stop(&sound);
+  }
 }

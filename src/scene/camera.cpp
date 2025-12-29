@@ -48,6 +48,8 @@ Camera::Camera() {
   flashlightEnabled = false;
   flashlightToggled = false;
   flashlightToggleCooldown.duration = 0.2f;
+  isMoving = false;
+  isSprinting = false;
 
   // bobbing settings
   bobbingAmount = 0.03f;
@@ -81,18 +83,24 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   static bool cWasDown = false;
   static bool isSneaking = false;
   float baseSpeed = 3.0f;
+  bool hasInput = glm::length(wishDir) > 0.0f;
+  isMoving = hasInput;
+  isSprinting = false;
 
   // Calculate base speed
   float currentSpeed = baseSpeed;
 
   // Sprinting Logic with "Human" constraints
-  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && !freeCam) {
+  if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS && !freeCam &&
+      hasInput) {
     // Only allow sprinting if moving generally FORWARD
     // Dot product tells us if wishDir and flatFront point in the same direction
-    float movementDirectionMatch = glm::dot(wishDir, flatFront);
+    glm::vec3 wishDirNorm = glm::normalize(wishDir);
+    float movementDirectionMatch = glm::dot(wishDirNorm, flatFront);
 
     if (movementDirectionMatch > 0.5f) {  // Moving mostly forward
       currentSpeed = 5.0f;
+      isSprinting = true;
     } else {
       // Trying to sprint backwards or sideways? No boost for you.
       currentSpeed = baseSpeed;
@@ -101,6 +109,7 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
 
   if (isSneaking && !freeCam) {
     currentSpeed = 1.5f;
+    isSprinting = false;
   }
 
   float velocityValue = currentSpeed * deltaTime;

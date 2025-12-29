@@ -48,6 +48,8 @@ class Camera {
   bool flashlightEnabled;
   bool flashlightToggled;
   Cooldown flashlightToggleCooldown;
+  bool isMoving;
+  bool isSprinting;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
   void ProcessKeyboard(GLFWwindow* window, float deltaTime, bool freeCam);

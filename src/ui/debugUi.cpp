@@ -49,6 +49,13 @@ void drawDebugUi(AppState& state) {
                      60.0f);
   ImGui::SliderFloat("Fog", &state.fogDensity, 0.005f, 0.50f);
   ImGui::End();
+
+  ImGui::Begin("Audio");
+  if (ImGui::SliderFloat("Master Volume", &state.audio.masterVolume, 0.0f,
+                         1.0f)) {
+    setMasterVolume(state.audio, state.audio.masterVolume);
+  }
+  ImGui::End();
 }
 
 void endDebugUiFrame() {

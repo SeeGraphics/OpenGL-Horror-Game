@@ -5,6 +5,7 @@
 
 #include <glm/glm.hpp>
 
+#include "audio/audio.hpp"
 #include "scene/camera.hpp"
 
 class Shader;
@@ -38,6 +39,7 @@ struct AppState {
   bool freeCam = false;
 
   Camera camera;
+  AudioSystem audio;
 
   Shader* worldShader = nullptr;
   Shader* skyboxShader = nullptr;

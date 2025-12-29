@@ -5,6 +5,23 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+void Cooldown::Update(float deltaTime) {
+  if (timer > 0.0f) {
+    timer -= deltaTime;
+    if (timer < 0.0f) {
+      timer = 0.0f;
+    }
+  }
+}
+
+bool Cooldown::TryUse() {
+  if (timer > 0.0f) {
+    return false;
+  }
+  timer = duration;
+  return true;
+}
+
 // constructor for the vars
 Camera::Camera() {
   cameraHeight = 1.5f;  // eye level, changable (e.g crouching)
@@ -28,6 +45,8 @@ Camera::Camera() {
   // for ungrabbing mouse with ´q´
   mouseDisabled = true;
   flashlightEnabled = false;
+  flashlightToggled = false;
+  flashlightToggleCooldown.duration = 0.2f;
 
   // bobbing settings
   bobbingAmount = 0.03f;
@@ -44,6 +63,7 @@ void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
 
 void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
                              bool freeCam) {
+  flashlightToggleCooldown.Update(deltaTime);
   glm::vec3 wishDir = glm::vec3(0.0f);
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) wishDir += flatFront;
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) wishDir -= flatFront;
@@ -100,7 +120,10 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   static bool fWasDown = false;
   if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
     if (!fWasDown) {
-      flashlightEnabled = !flashlightEnabled;
+      if (flashlightToggleCooldown.TryUse()) {
+        flashlightEnabled = !flashlightEnabled;
+        flashlightToggled = true;
+      }
     }
     fWasDown = true;
   } else {

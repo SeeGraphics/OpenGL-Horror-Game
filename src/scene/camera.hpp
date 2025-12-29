@@ -5,6 +5,14 @@
 
 struct GLFWwindow;
 
+struct Cooldown {
+  float timer = 0.0f;
+  float duration = 0.2f;
+
+  void Update(float deltaTime);
+  bool TryUse();
+};
+
 class Camera {
  public:
   Camera();
@@ -35,6 +43,8 @@ class Camera {
   // for ungrabbing mouse with ´q´
   bool mouseDisabled;
   bool flashlightEnabled;
+  bool flashlightToggled;
+  Cooldown flashlightToggleCooldown;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
   void ProcessKeyboard(GLFWwindow* window, float deltaTime, bool freeCam);

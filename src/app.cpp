@@ -1,10 +1,12 @@
 #define GL_SILENCE_DEPRECATION
 // clang-format off
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 // clang-format on
 #include "app.hpp"
-#include "scene/world.hpp"
+
 #include "render/renderer.hpp"
+#include "scene/world.hpp"
 #include "ui/debugUi.hpp"
 
 static AppState* g_state = nullptr;
@@ -12,7 +14,7 @@ static AppState* g_state = nullptr;
 static void processInput(GLFWwindow* window);
 static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 static void framebuffer_size_callback(GLFWwindow* window, int width,
-                                       int height);
+                                      int height);
 
 bool AppInit(AppState& state, GLFWwindow* window) {
   g_state = &state;
@@ -23,6 +25,10 @@ bool AppInit(AppState& state, GLFWwindow* window) {
   }
 
   if (!initDebugUi(window)) {
+    return false;
+  }
+
+  if (!initAudio(state.audio)) {
     return false;
   }
 
@@ -39,6 +45,11 @@ void AppFrame(AppState& state, GLFWwindow* window) {
 
   // input
   processInput(window);
+
+  if (state.camera.flashlightToggled) {
+    playSound(state.audio, SoundId::FlashlightToggle);
+    state.camera.flashlightToggled = false;
+  }
 
   beginDebugUiFrame();
   drawDebugUi(state);
@@ -57,9 +68,8 @@ void AppFrame(AppState& state, GLFWwindow* window) {
 
 void AppShutdown(AppState& state) {
   renderShutdown(state);
-
   shutdownDebugUi();
-
+  shutdownAudio(state.audio);
   g_state = nullptr;
 }
 
@@ -120,7 +130,7 @@ static void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 }
 
 static void framebuffer_size_callback(GLFWwindow* window, int width,
-                                       int height) {
+                                      int height) {
   (void)window;
   glViewport(0, 0, width, height);
 }

@@ -29,10 +29,12 @@ int main(int argc, char** argv) {
   std::string inc =
       "-I./src -I./third_party/imgui -I./third_party/imgui/backends "
       "-I./third_party/glad/include -I./third_party/stb "
+      "-I./third_party/miniaudio "
       "-I/opt/homebrew/include";
   std::string lib =
       "-L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa "
-      "-framework IOKit -framework CoreVideo";
+      "-framework IOKit -framework CoreVideo "
+      "-framework CoreFoundation -framework CoreAudio -framework AudioToolbox";
   std::string flags = "-std=c++17 -Wall -Wextra";
 
   run_cmd("mkdir -p build");
@@ -40,6 +42,12 @@ int main(int argc, char** argv) {
   // GLAD (C)
   if (needs_rebuild("third_party/glad/src/glad.c", "build/glad.o")) {
     run_cmd(cc + " -c third_party/glad/src/glad.c -o build/glad.o " + inc);
+  }
+
+  // miniaudio (C)
+  if (needs_rebuild("third_party/miniaudio/miniaudio.c", "build/miniaudio.o")) {
+    run_cmd(cc + " -c third_party/miniaudio/miniaudio.c -o build/miniaudio.o " +
+            inc);
   }
 
   // ImGui & Project Files (C++)
@@ -53,6 +61,7 @@ int main(int argc, char** argv) {
       {"third_party/imgui/backends/imgui_impl_opengl3.cpp",
        "build/imgui_impl_opengl3.o"},
       {"src/app.cpp", "build/app.o"},
+      {"src/audio/audio.cpp", "build/audio.o"},
       {"src/ui/debugUi.cpp", "build/debugUi.o"},
       {"src/render/renderer.cpp", "build/renderer.o"},
       {"src/scene/world.cpp", "build/world.o"},
@@ -61,7 +70,7 @@ int main(int argc, char** argv) {
       {"src/render/shader.cpp", "build/shader.o"},
       {"third_party/stb/stb_image.cpp", "build/stb_image.o"}};
 
-  std::string all_objs = "build/glad.o ";
+  std::string all_objs = "build/glad.o build/miniaudio.o ";
   for (const auto& file : files) {
     if (needs_rebuild(file.first, file.second)) {
       run_cmd(cxx + " " + flags + " -c " + file.first + " -o " + file.second +

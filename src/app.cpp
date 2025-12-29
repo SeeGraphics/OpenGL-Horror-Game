@@ -5,6 +5,8 @@
 // clang-format on
 #include "app.hpp"
 
+#include <cstring>
+
 #include "render/renderer.hpp"
 #include "scene/world.hpp"
 #include "ui/debugUi.hpp"
@@ -15,6 +17,13 @@ static void processInput(GLFWwindow* window);
 static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 static void framebuffer_size_callback(GLFWwindow* window, int width,
                                       int height);
+static int addModelAsset(AppState& state, const char* id, const char* path,
+                         const ModelRenderSettings& settings);
+static int addModelInstance(AppState& state, int assetIndex,
+                            const glm::vec3& position,
+                            const glm::vec3& rotation,
+                            const glm::vec3& scale);
+static void initModels(AppState& state);
 
 bool AppInit(AppState& state, GLFWwindow* window) {
   g_state = &state;
@@ -23,6 +32,8 @@ bool AppInit(AppState& state, GLFWwindow* window) {
   if (!renderInit(state, window)) {
     return false;
   }
+
+  initModels(state);
 
   if (!initDebugUi(window)) {
     return false;
@@ -36,6 +47,69 @@ bool AppInit(AppState& state, GLFWwindow* window) {
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
   return true;
+}
+
+static int addModelAsset(AppState& state, const char* id, const char* path,
+                         const ModelRenderSettings& settings) {
+  state.modelAssets.emplace_back();
+  ModelAsset& asset = state.modelAssets.back();
+  if (id) {
+    asset.id = id;
+  }
+  if (path) {
+    asset.path = path;
+  }
+  asset.renderSettings = settings;
+  if (!asset.path.empty()) {
+    asset.model.Load(asset.path.c_str());
+  }
+  return static_cast<int>(state.modelAssets.size()) - 1;
+}
+
+static int addModelInstance(AppState& state, int assetIndex,
+                            const glm::vec3& position,
+                            const glm::vec3& rotation,
+                            const glm::vec3& scale) {
+  if (assetIndex < 0 ||
+      assetIndex >= static_cast<int>(state.modelAssets.size())) {
+    return -1;
+  }
+
+  ModelInstance instance;
+  instance.assetIndex = assetIndex;
+  instance.position = position;
+  instance.rotation = rotation;
+  instance.scale = scale;
+  state.modelInstances.push_back(instance);
+  return static_cast<int>(state.modelInstances.size()) - 1;
+}
+
+static void initModels(AppState& state) {
+  state.modelAssets.clear();
+  state.modelInstances.clear();
+  state.treeAssetIndex = -1;
+  state.treeInstanceIndex = -1;
+
+  int templateCount = 0;
+  const ModelTemplate* templates = GetModelTemplates(&templateCount);
+  int treeAsset = -1;
+  for (int i = 0; i < templateCount; ++i) {
+    const ModelTemplate& entry = templates[i];
+    int assetIndex =
+        addModelAsset(state, entry.id, entry.path, entry.renderSettings);
+    if (entry.id && std::strcmp(entry.id, "Tree") == 0) {
+      treeAsset = assetIndex;
+    }
+  }
+  state.treeAssetIndex = treeAsset;
+
+  float treeX = 0.0f;
+  float treeZ = 0.0f;
+  float treeY = getTerrainHeightAt(state, treeX, treeZ);
+  int treeInstance = addModelInstance(
+      state, treeAsset, glm::vec3(treeX, treeY, treeZ), glm::vec3(0.0f),
+      glm::vec3(0.003f));
+  state.treeInstanceIndex = treeInstance;
 }
 
 void AppFrame(AppState& state, GLFWwindow* window) {

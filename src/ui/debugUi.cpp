@@ -71,6 +71,24 @@ void drawDebugUi(AppState& state) {
                          1.0f)) {
     state.grassDirty = true;
   }
+  if (state.treeInstanceIndex >= 0 &&
+      state.treeInstanceIndex < static_cast<int>(state.modelInstances.size())) {
+    ModelInstance& treeInstance = state.modelInstances[state.treeInstanceIndex];
+    float treeScale = treeInstance.scale.x;
+    if (ImGui::SliderFloat("Tree Scale", &treeScale, 0.001f, 0.010f)) {
+      treeInstance.scale = glm::vec3(treeScale);
+    }
+  }
+  if (state.treeAssetIndex >= 0 &&
+      state.treeAssetIndex < static_cast<int>(state.modelAssets.size())) {
+    ModelRenderSettings& treeSettings =
+        state.modelAssets[state.treeAssetIndex].renderSettings;
+    ImGui::SliderFloat("Tree Intensity", &treeSettings.albedoIntensity, 0.0f,
+                       2.0f);
+    ImGui::SliderFloat("Tree Normal Strength", &treeSettings.normalStrength,
+                       0.0f, 4.0f);
+    ImGui::Checkbox("Tree Normal Debug", &treeSettings.normalDebug);
+  }
   ImGui::SliderFloat("Grass Intensity", &state.grassIntensity, 0.0f, 1.0f);
   ImGui::SliderFloat("Skybox Intensity", &state.skyboxIntensity, 0.0f, 1.0f);
   ImGui::End();

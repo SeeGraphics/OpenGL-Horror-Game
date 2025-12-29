@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "app.hpp"
-#include "scene/world.hpp"
 #include "primitives.hpp"
 #include "render/shader.hpp"
+#include "scene/world.hpp"
 
 static unsigned int loadCubemap(const std::vector<std::string>& faces);
 static void uploadTerrainBuffers(AppState& state);
@@ -74,17 +74,17 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   float grassHeight = state.cubeScale * 0.9f;
   float halfWidth = grassWidth * 0.5f;
   float grassVertices[] = {
-      -halfWidth, 0.0f,      0.0f, 0.0f, 0.0f,  // quad A
-      halfWidth,  0.0f,      0.0f, 1.0f, 0.0f,
-      halfWidth,  grassHeight, 0.0f, 1.0f, 1.0f,
-      -halfWidth, grassHeight, 0.0f, 0.0f, 1.0f,
-      0.0f,       0.0f,     -halfWidth, 0.0f, 0.0f,  // quad B
-      0.0f,       0.0f,      halfWidth, 1.0f, 0.0f,
-      0.0f,       grassHeight, halfWidth, 1.0f, 1.0f,
+      -halfWidth, 0.0f,        0.0f,       0.0f, 0.0f,  // quad A
+      halfWidth,  0.0f,        0.0f,       1.0f, 0.0f,
+      halfWidth,  grassHeight, 0.0f,       1.0f, 1.0f,
+      -halfWidth, grassHeight, 0.0f,       0.0f, 1.0f,
+      0.0f,       0.0f,        -halfWidth, 0.0f, 0.0f,  // quad B
+      0.0f,       0.0f,        halfWidth,  1.0f, 0.0f,
+      0.0f,       grassHeight, halfWidth,  1.0f, 1.0f,
       0.0f,       grassHeight, -halfWidth, 0.0f, 1.0f};
   unsigned int grassIndices[] = {0, 1, 2, 2, 3, 0, 4, 5, 6, 6, 7, 4};
-  state.grassIndexCount = static_cast<int>(
-      sizeof(grassIndices) / sizeof(grassIndices[0]));
+  state.grassIndexCount =
+      static_cast<int>(sizeof(grassIndices) / sizeof(grassIndices[0]));
 
   glGenVertexArrays(1, &state.grassVAO);
   glGenBuffers(1, &state.grassVBO);
@@ -166,9 +166,9 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   int grassWidthPx, grassHeightPx, grassChannels;
   stbi_set_flip_vertically_on_load(true);
-  unsigned char* grassData = stbi_load("assets/environment/grass_blades.png",
-                                       &grassWidthPx, &grassHeightPx,
-                                       &grassChannels, 0);
+  unsigned char* grassData =
+      stbi_load("assets/environment/grass_blades.png", &grassWidthPx,
+                &grassHeightPx, &grassChannels, 0);
   stbi_set_flip_vertically_on_load(false);
   if (grassData) {
     GLenum format = (grassChannels == 4) ? GL_RGBA : GL_RGB;
@@ -194,8 +194,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   float grassUpdateDistance = state.cubeScale * 2.0f;
   float grassDx = state.camera.cameraPos.x - state.grassCenter.x;
   float grassDz = state.camera.cameraPos.z - state.grassCenter.y;
-  float grassMoveSq =
-      (grassDx * grassDx) + (grassDz * grassDz);
+  float grassMoveSq = (grassDx * grassDx) + (grassDz * grassDz);
   float grassUpdateSq = grassUpdateDistance * grassUpdateDistance;
   if (grassMoveSq > grassUpdateSq) {
     state.grassDirty = true;
@@ -229,8 +228,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
 
   // Use the dynamic aspect ratio
   glm::mat4 projection =
-      glm::perspective(glm::radians(60.0f), aspect, 0.1f,
-                       state.renderDistance);
+      glm::perspective(glm::radians(60.0f), aspect, 0.1f, state.renderDistance);
 
   state.worldShader->use();
 
@@ -250,14 +248,19 @@ void renderFrame(AppState& state, GLFWwindow* window) {
               state.specularStrength);
   glUniform1f(glGetUniformLocation(state.worldShader->ID, "shininess"),
               state.shininess);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"), 0);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"), 0);
+  glUniform1f(glGetUniformLocation(state.worldShader->ID, "normalStrength"),
+              1.0f);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"), 0);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"), 0);
 
   // flashlight spotlight
   glm::vec3 flashlightPos = state.camera.cameraPos;
   glm::vec3 flashlightDir = glm::normalize(state.camera.cameraFront);
   float flashlightInnerCutoff =
       glm::cos(glm::radians(state.flashlightRadius * 0.85f));
-  float flashlightOuterCutoff =
-      glm::cos(glm::radians(state.flashlightRadius));
+  float flashlightOuterCutoff = glm::cos(glm::radians(state.flashlightRadius));
   glUniform3fv(glGetUniformLocation(state.worldShader->ID, "spotPos"), 1,
                glm::value_ptr(flashlightPos));
   glUniform3fv(glGetUniformLocation(state.worldShader->ID, "spotDir"), 1,
@@ -276,22 +279,95 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                glm::value_ptr(state.fogColor));
   glUniform1f(glGetUniformLocation(state.worldShader->ID, "fogDensity"),
               state.fogDensity);
+  glUniform1f(glGetUniformLocation(state.worldShader->ID, "alphaCutoff"), 0.0f);
+  glUniform1i(glGetUniformLocation(state.worldShader->ID, "ourTexture"), 0);
+  glUniform1f(glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
+              1.0f);
 
   int modelLoc = glGetUniformLocation(state.worldShader->ID, "model");
   glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
   int viewLoc = glGetUniformLocation(state.worldShader->ID, "view");
   glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-  int projectionLoc =
-      glGetUniformLocation(state.worldShader->ID, "projection");
-  glUniformMatrix4fv(projectionLoc, 1, GL_FALSE,
-                     glm::value_ptr(projection));
+  int projectionLoc = glGetUniformLocation(state.worldShader->ID, "projection");
+  glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
   // render container
   glPolygonMode(GL_FRONT_AND_BACK, state.wireframe ? GL_LINE : GL_FILL);
+  glActiveTexture(GL_TEXTURE0);
+  glBindTexture(GL_TEXTURE_2D, state.texture);
   glBindVertexArray(state.VAO);
   glDrawElements(GL_TRIANGLES,
                  static_cast<GLsizei>(state.terrainIndices.size()),
                  GL_UNSIGNED_INT, 0);
+
+  if (!state.modelInstances.empty()) {
+    for (const ModelInstance& instance : state.modelInstances) {
+      if (instance.assetIndex < 0 ||
+          instance.assetIndex >=
+              static_cast<int>(state.modelAssets.size())) {
+        continue;
+      }
+
+      ModelAsset& asset = state.modelAssets[instance.assetIndex];
+      if (!asset.model.IsLoaded()) {
+        continue;
+      }
+
+      glm::mat4 modelMatrix = glm::mat4(1.0f);
+      modelMatrix = glm::translate(modelMatrix, instance.position);
+      modelMatrix =
+          glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                      glm::vec3(1.0f, 0.0f, 0.0f));
+      modelMatrix =
+          glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
+                      glm::vec3(0.0f, 1.0f, 0.0f));
+      modelMatrix =
+          glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
+                      glm::vec3(0.0f, 0.0f, 1.0f));
+      modelMatrix = glm::scale(modelMatrix, instance.scale);
+
+      const ModelRenderSettings& settings = asset.renderSettings;
+      glUniform1f(
+          glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
+          settings.albedoIntensity);
+      glUniform1f(glGetUniformLocation(state.worldShader->ID, "alphaCutoff"),
+                  settings.alphaCutoff);
+      glUniform1f(glGetUniformLocation(state.worldShader->ID, "normalStrength"),
+                  settings.normalStrength);
+      glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"),
+                  settings.normalDebug ? 1 : 0);
+      glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"),
+                  settings.doubleSided ? 1 : 0);
+      glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                  settings.useNormalMap ? 1 : 0);
+      glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
+                  settings.useNormalMap ? 1 : 0);
+
+      glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
+      for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, mesh.texture);
+        if (settings.useNormalMap) {
+          glActiveTexture(GL_TEXTURE1);
+          glBindTexture(GL_TEXTURE_2D, mesh.normalMap);
+        }
+        glBindVertexArray(mesh.vao);
+        glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+      }
+    }
+
+    glUniform1f(glGetUniformLocation(state.worldShader->ID, "alphaCutoff"),
+                0.0f);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"), 0);
+    glUniform1f(glGetUniformLocation(state.worldShader->ID, "normalStrength"),
+                1.0f);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"), 0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"), 0);
+    glUniform1f(glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
+                1.0f);
+  }
 
   if (!state.grassInstances.empty()) {
     state.grassShader->use();
@@ -347,9 +423,8 @@ void renderFrame(AppState& state, GLFWwindow* window) {
 
   glUniformMatrix4fv(glGetUniformLocation(state.skyboxShader->ID, "view"), 1,
                      GL_FALSE, glm::value_ptr(skyView));
-  glUniformMatrix4fv(
-      glGetUniformLocation(state.skyboxShader->ID, "projection"), 1, GL_FALSE,
-      glm::value_ptr(projection));
+  glUniformMatrix4fv(glGetUniformLocation(state.skyboxShader->ID, "projection"),
+                     1, GL_FALSE, glm::value_ptr(projection));
   glUniform1f(glGetUniformLocation(state.skyboxShader->ID, "skyboxIntensity"),
               state.skyboxIntensity);
 
@@ -372,6 +447,13 @@ void renderShutdown(AppState& state) {
   if (state.grassVBO) glDeleteBuffers(1, &state.grassVBO);
   if (state.grassEBO) glDeleteBuffers(1, &state.grassEBO);
   if (state.grassInstanceVBO) glDeleteBuffers(1, &state.grassInstanceVBO);
+  for (ModelAsset& asset : state.modelAssets) {
+    asset.model.Shutdown();
+  }
+  state.modelAssets.clear();
+  state.modelInstances.clear();
+  state.treeAssetIndex = -1;
+  state.treeInstanceIndex = -1;
 
   delete state.worldShader;
   state.worldShader = nullptr;
@@ -412,8 +494,7 @@ static unsigned int loadCubemap(const std::vector<std::string>& faces) {
 static void uploadTerrainBuffers(AppState& state) {
   glBindVertexArray(state.VAO);
   glBindBuffer(GL_ARRAY_BUFFER, state.VBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               state.terrainVertices.size() * sizeof(float),
+  glBufferData(GL_ARRAY_BUFFER, state.terrainVertices.size() * sizeof(float),
                state.terrainVertices.data(), GL_STATIC_DRAW);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state.EBO);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER,
@@ -425,8 +506,7 @@ static void uploadTerrainBuffers(AppState& state) {
 static void uploadGrassInstances(AppState& state) {
   glBindVertexArray(state.grassVAO);
   glBindBuffer(GL_ARRAY_BUFFER, state.grassInstanceVBO);
-  glBufferData(GL_ARRAY_BUFFER,
-               state.grassInstances.size() * sizeof(glm::vec3),
+  glBufferData(GL_ARRAY_BUFFER, state.grassInstances.size() * sizeof(glm::vec3),
                state.grassInstances.data(), GL_STATIC_DRAW);
   glBindVertexArray(0);
 }

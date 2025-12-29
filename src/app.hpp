@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "audio/audio.hpp"
+#include "render/model.hpp"
 #include "scene/camera.hpp"
 
 class Shader;
@@ -53,6 +54,10 @@ struct AppState {
   Shader* worldShader = nullptr;
   Shader* skyboxShader = nullptr;
   Shader* grassShader = nullptr;
+  std::vector<ModelAsset> modelAssets;
+  std::vector<ModelInstance> modelInstances;
+  int treeAssetIndex = -1;
+  int treeInstanceIndex = -1;
 
   unsigned int VBO = 0;
   unsigned int VAO = 0;

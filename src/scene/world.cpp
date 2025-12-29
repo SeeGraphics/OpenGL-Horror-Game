@@ -100,8 +100,7 @@ static float sampleHeightNormalized(float u, float v) {
   return h0 + (h1 - h0) * ty;
 }
 
-static float getTerrainHeightAt(const AppState& state, float worldX,
-                                float worldZ) {
+float getTerrainHeightAt(const AppState& state, float worldX, float worldZ) {
   int gridSize = state.floorSize * 2;
   float tileSize = state.cubeScale;
   float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;

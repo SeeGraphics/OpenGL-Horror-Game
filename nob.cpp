@@ -75,7 +75,8 @@ int main(int argc, char** argv) {
   std::string lib =
       "-L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa "
       "-framework IOKit -framework CoreVideo "
-      "-framework CoreFoundation -framework CoreAudio -framework AudioToolbox";
+      "-framework CoreFoundation -framework CoreAudio -framework AudioToolbox "
+      "-lassimp";
   std::string flags = "-std=c++17 -Wall -Wextra";
 
   time_t srcHeaderTime = getLatestHeaderTime("src");
@@ -110,6 +111,7 @@ int main(int argc, char** argv) {
       {"src/audio/audio.cpp", "build/audio.o"},
       {"src/ui/debugUi.cpp", "build/debugUi.o"},
       {"src/render/renderer.cpp", "build/renderer.o"},
+      {"src/render/model.cpp", "build/model.o"},
       {"src/scene/world.cpp", "build/world.o"},
       {"src/main.cpp", "build/main.o"},
       {"src/scene/camera.cpp", "build/camera.o"},

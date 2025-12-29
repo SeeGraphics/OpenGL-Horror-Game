@@ -9,3 +9,8 @@ AGENTS.md
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Editor lock files and recovery files
+.#*
+*~
+\#*\#

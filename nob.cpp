@@ -1,6 +1,8 @@
 #include <sys/stat.h>
 
 #include <cstdlib>
+#include <cstring>
+#include <dirent.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -12,11 +14,50 @@ time_t get_mtime(const std::string& path) {
   return 0;
 }
 
+static time_t gHeaderTime = 0;
+
+static bool isDotEntry(const char* name) {
+  return std::strcmp(name, ".") == 0 || std::strcmp(name, "..") == 0;
+}
+
+static bool isHeaderFile(const char* name) {
+  const char* dot = std::strrchr(name, '.');
+  if (!dot) return false;
+  return std::strcmp(dot, ".h") == 0 || std::strcmp(dot, ".hpp") == 0;
+}
+
+time_t getLatestHeaderTime(const std::string& root) {
+  DIR* dir = opendir(root.c_str());
+  if (!dir) return 0;
+
+  time_t latest = 0;
+  dirent* entry = nullptr;
+  while ((entry = readdir(dir)) != nullptr) {
+    if (isDotEntry(entry->d_name)) continue;
+    std::string path = root + "/" + entry->d_name;
+    struct stat s;
+    if (stat(path.c_str(), &s) != 0) continue;
+
+    if (S_ISDIR(s.st_mode)) {
+      time_t childLatest = getLatestHeaderTime(path);
+      if (childLatest > latest) latest = childLatest;
+    } else if (S_ISREG(s.st_mode)) {
+      if (isHeaderFile(entry->d_name)) {
+        if (s.st_mtime > latest) latest = s.st_mtime;
+      }
+    }
+  }
+
+  closedir(dir);
+  return latest;
+}
+
 bool needs_rebuild(const std::string& src, const std::string& obj) {
   time_t srcTime = get_mtime(src);
   time_t objTime = get_mtime(obj);
   if (objTime == 0) return true;  // Object doesn't exist
-  return srcTime > objTime;       // Source is newer than object
+  if (srcTime > objTime) return true;
+  return gHeaderTime > objTime;
 }
 
 void run_cmd(const std::string& cmd) {
@@ -36,6 +77,11 @@ int main(int argc, char** argv) {
       "-framework IOKit -framework CoreVideo "
       "-framework CoreFoundation -framework CoreAudio -framework AudioToolbox";
   std::string flags = "-std=c++17 -Wall -Wextra";
+
+  time_t srcHeaderTime = getLatestHeaderTime("src");
+  time_t thirdPartyHeaderTime = getLatestHeaderTime("third_party");
+  gHeaderTime =
+      (srcHeaderTime > thirdPartyHeaderTime) ? srcHeaderTime : thirdPartyHeaderTime;
 
   run_cmd("mkdir -p build");
 

@@ -33,6 +33,7 @@ class Camera {
   float jumpforce;
   glm::vec3 velocity;
   bool isGrounded;
+  Cooldown jumpCooldown;
 
   // bobbing
   float bobbingAmount;
@@ -42,6 +43,8 @@ class Camera {
 
   // for ungrabbing mouse with ´q´
   bool mouseDisabled;
+
+  // flashlight
   bool flashlightEnabled;
   bool flashlightToggled;
   Cooldown flashlightToggleCooldown;

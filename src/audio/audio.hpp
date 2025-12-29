@@ -3,10 +3,7 @@
 
 #include <miniaudio.h>
 
-enum class SoundId {
-  FlashlightToggle = 0,
-  Count
-};
+enum class SoundId { FlashlightToggle = 0, Count };
 
 inline constexpr int soundCount = static_cast<int>(SoundId::Count);
 
@@ -19,7 +16,7 @@ struct AudioSystem {
   ma_sound sounds[soundCount];
   AudioPaths paths;
   bool initialized = false;
-  float masterVolume = 1.0f;
+  float masterVolume = 0.8f;
 };
 
 bool initAudio(AudioSystem& audio);

@@ -41,6 +41,7 @@ Camera::Camera() {
   jumpforce = 3.0f;
   velocity = glm::vec3(0.0f);
   isGrounded = false;
+  jumpCooldown.duration = 0.8f;
 
   // for ungrabbing mouse with ´q´
   mouseDisabled = true;
@@ -63,7 +64,11 @@ void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
 
 void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
                              bool freeCam) {
+  // update cooldowns
   flashlightToggleCooldown.Update(deltaTime);
+  jumpCooldown.Update(deltaTime);
+
+  // movement
   glm::vec3 wishDir = glm::vec3(0.0f);
   if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) wishDir += flatFront;
   if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) wishDir -= flatFront;
@@ -136,8 +141,10 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
       cameraPos += velocityValue * cameraUp;
     } else {
       if (isGrounded) {
-        velocity.y = jumpforce;
-        isGrounded = false;
+        if (jumpCooldown.TryUse()) {
+          velocity.y = jumpforce;
+          isGrounded = false;
+        }
       }
     }
   }

@@ -66,6 +66,8 @@ struct AppState {
   std::vector<ModelInstance> modelInstances;
   int treeAssetIndex = -1;
   int treeInstanceIndex = -1;
+  int walterAssetIndex = -1;
+  int walterInstanceIndex = -1;
 
   unsigned int VBO = 0;
   unsigned int VAO = 0;

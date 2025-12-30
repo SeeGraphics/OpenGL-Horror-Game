@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+struct ModelRenderSettings;
+
 struct ModelMesh {
   unsigned int vao = 0;
   unsigned int vbo = 0;
@@ -20,6 +22,7 @@ class Model {
   explicit Model(const char* path);
 
   void Load(const char* path);
+  void Load(const char* path, const ModelRenderSettings& settings);
   void Shutdown();
 
   const std::string& GetPath() const { return modelPath; }
@@ -41,6 +44,7 @@ struct ModelRenderSettings {
   bool useNormalMap = false;
   bool doubleSided = false;
   float alphaCutoff = 0.0f;
+  bool flipUv = true;
 };
 
 struct ModelAsset {

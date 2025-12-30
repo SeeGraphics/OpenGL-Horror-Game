@@ -44,7 +44,7 @@ static int addModelAsset(AppState& state, const char* id, const char* path,
   }
   asset.renderSettings = settings;
   if (!asset.path.empty()) {
-    asset.model.Load(asset.path.c_str());
+    asset.model.Load(asset.path.c_str(), asset.renderSettings);
   }
   return static_cast<int>(state.modelAssets.size()) - 1;
 }
@@ -268,17 +268,15 @@ void buildFloor(AppState& state) {
   if (resolutionScale < 0.1f) {
     resolutionScale = 0.1f;
   }
-  float worldSize = static_cast<float>(state.floorSize) * 2.0f *
-                    state.cubeScale;
-  int gridSize = static_cast<int>(
-      std::round((static_cast<float>(state.floorSize) * 2.0f) /
-                 resolutionScale));
+  float worldSize =
+      static_cast<float>(state.floorSize) * 2.0f * state.cubeScale;
+  int gridSize = static_cast<int>(std::round(
+      (static_cast<float>(state.floorSize) * 2.0f) / resolutionScale));
   if (gridSize < 1) {
     gridSize = 1;
   }
   float tileSize = worldSize / static_cast<float>(gridSize);
-  float start =
-      (-static_cast<float>(state.floorSize) - 0.5f) * state.cubeScale;
+  float start = (-static_cast<float>(state.floorSize) - 0.5f) * state.cubeScale;
   int vertCount = gridSize + 1;
 
   state.terrainVertices.clear();
@@ -376,7 +374,6 @@ void buildGrass(AppState& state) {
   if (density <= 0.0f) {
     return;
   }
-
 
   float radius = state.grassRenderRadius;
   if (radius < 0.0f) radius = 0.0f;
@@ -504,21 +501,36 @@ void initWorldModels(AppState& state) {
   state.modelInstances.clear();
   state.treeAssetIndex = -1;
   state.treeInstanceIndex = -1;
+  state.walterAssetIndex = -1;
+  state.walterInstanceIndex = -1;
 
   int templateCount = 0;
   const ModelTemplate* templates = GetModelTemplates(&templateCount);
   int treeAsset = -1;
+  int walterAsset = -1;
   for (int i = 0; i < templateCount; ++i) {
     const ModelTemplate& entry = templates[i];
     int assetIndex =
         addModelAsset(state, entry.id, entry.path, entry.renderSettings);
+
+    // get model asset
     if (entry.id && std::strcmp(entry.id, "Tree") == 0) {
       treeAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "WalterWhite") == 0) {
+      walterAsset = assetIndex;
     }
   }
   state.treeAssetIndex = treeAsset;
-
+  state.walterAssetIndex = walterAsset;
   scatterTrees(state, treeAsset);
+
+  // add test walter
+  if (walterAsset >= 0) {
+    float walterScale = 0.001f;
+    state.walterInstanceIndex = addModelInstance(
+        state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
+        glm::vec3(0.0f), glm::vec3(walterScale));
+  }
 }
 
 void rebuildWorldTrees(AppState& state) {

@@ -25,8 +25,16 @@ static ModelRenderSettings makeTreeSettings() {
   return settings;
 }
 
+static ModelRenderSettings makeWalterSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
 static const ModelTemplate gModelTemplates[] = {
     {"Tree", "assets/models/tree/source/tree.fbx", makeTreeSettings()},
+    {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
+     makeWalterSettings()},
 };
 
 const ModelTemplate* GetModelTemplates(int* count) {
@@ -109,6 +117,49 @@ static std::string chooseFallbackBaseName(const aiScene* scene, aiMesh* mesh) {
     return "branches";
   }
   return "tree";
+}
+
+static int chooseUvChannel(const aiScene* scene, aiMesh* mesh) {
+  int fallback = -1;
+  if (mesh) {
+    for (int channel = 0; channel < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++channel) {
+      if (mesh->HasTextureCoords(channel)) {
+        fallback = channel;
+        break;
+      }
+    }
+  }
+
+  if (!scene || !mesh) {
+    return fallback;
+  }
+  if (mesh->mMaterialIndex >= scene->mNumMaterials) {
+    return fallback;
+  }
+  aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+  if (!material) {
+    return fallback;
+  }
+
+  const aiTextureType textureTypes[] = {aiTextureType_DIFFUSE,
+                                        aiTextureType_BASE_COLOR};
+  for (aiTextureType type : textureTypes) {
+    if (material->GetTextureCount(type) == 0) {
+      continue;
+    }
+    aiString texturePath;
+    unsigned int uvIndex = 0;
+    if (material->GetTexture(type, 0, &texturePath, nullptr, &uvIndex) !=
+        AI_SUCCESS) {
+      continue;
+    }
+    if (uvIndex < AI_MAX_NUMBER_OF_TEXTURECOORDS &&
+        mesh->HasTextureCoords(uvIndex)) {
+      return static_cast<int>(uvIndex);
+    }
+  }
+
+  return fallback;
 }
 
 static unsigned int getDefaultWhiteTexture() {
@@ -268,6 +319,17 @@ static TextureInfo loadDiffuseTexture(const aiScene* scene, aiMesh* mesh,
   }
 
   if (result.id == 0) {
+    const char* fallbackNames[] = {"texture", "albedo", "diffuse", "basecolor",
+                                   "base_color"};
+    for (const char* name : fallbackNames) {
+      result = loadTextureByBaseName(name, texturesDirectory);
+      if (result.id != 0) {
+        break;
+      }
+    }
+  }
+
+  if (result.id == 0) {
     result.id = getDefaultWhiteTexture();
   }
   return result;
@@ -334,6 +396,11 @@ void Model::Shutdown() {
 }
 
 void Model::Load(const char* path) {
+  ModelRenderSettings settings;
+  Load(path, settings);
+}
+
+void Model::Load(const char* path, const ModelRenderSettings& settings) {
   Shutdown();
 
   if (path) {
@@ -347,11 +414,13 @@ void Model::Load(const char* path) {
   }
 
   Assimp::Importer importer;
-  const aiScene* scene = importer.ReadFile(
-      modelPath, aiProcess_Triangulate | aiProcess_FlipUVs |
-                     aiProcess_CalcTangentSpace |
-                     aiProcess_GenSmoothNormals |
-                     aiProcess_PreTransformVertices);
+  unsigned int flags = aiProcess_Triangulate | aiProcess_CalcTangentSpace |
+                       aiProcess_GenSmoothNormals |
+                       aiProcess_PreTransformVertices;
+  if (settings.flipUv) {
+    flags |= aiProcess_FlipUVs;
+  }
+  const aiScene* scene = importer.ReadFile(modelPath, flags);
   if (!scene || !scene->mRootNode || scene->mNumMeshes == 0) {
     std::cout << "Model loading failed" << std::endl;
     return;
@@ -367,13 +436,7 @@ void Model::Load(const char* path) {
     aiMesh* mesh = scene->mMeshes[meshIndex];
     if (!mesh) continue;
 
-    int uvChannel = -1;
-    for (int channel = 0; channel < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++channel) {
-      if (mesh->HasTextureCoords(channel)) {
-        uvChannel = channel;
-        break;
-      }
-    }
+    int uvChannel = chooseUvChannel(scene, mesh);
 
     std::vector<float> vertices;
     vertices.reserve(mesh->mNumVertices * 11);

@@ -95,6 +95,26 @@ void drawDebugUi(AppState& state) {
       }
     }
   }
+  if (state.walterAssetIndex >= 0) {
+    float walterScale = 0.0f;
+    bool foundWalter = false;
+    for (const ModelInstance& instance : state.modelInstances) {
+      if (instance.assetIndex == state.walterAssetIndex) {
+        walterScale = instance.scale.x;
+        foundWalter = true;
+        break;
+      }
+    }
+    if (foundWalter) {
+      if (ImGui::SliderFloat("Walter Scale", &walterScale, 0.0001f, 0.1f)) {
+        for (ModelInstance& instance : state.modelInstances) {
+          if (instance.assetIndex == state.walterAssetIndex) {
+            instance.scale = glm::vec3(walterScale);
+          }
+        }
+      }
+    }
+  }
   if (state.treeAssetIndex >= 0 &&
       state.treeAssetIndex < static_cast<int>(state.modelAssets.size())) {
     ModelRenderSettings& treeSettings =

@@ -555,6 +555,8 @@ void renderShutdown(AppState& state) {
   state.modelInstances.clear();
   state.treeAssetIndex = -1;
   state.treeInstanceIndex = -1;
+  state.walterAssetIndex = -1;
+  state.walterInstanceIndex = -1;
 
   delete state.worldShader;
   state.worldShader = nullptr;

@@ -1,12 +1,12 @@
 #include "render/model.hpp"
 
-#include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <glad/glad.h>
 #include <stb_image.h>
 
 #include <algorithm>
+#include <assimp/Importer.hpp>
 #include <cctype>
 #include <cmath>
 #include <cstring>
@@ -14,7 +14,13 @@
 #include <string>
 #include <vector>
 
+// decided to just use models with 1 fbx and 1 texture.png
+// -> is much easier to load and works super well with simple
+// ps1 style models. Some models need settings.flipUv off to load the texture
+// correctly. dont ask me why its flipped by default :P
+
 static ModelRenderSettings makeTreeSettings() {
+  // most these arent that importan
   ModelRenderSettings settings;
   settings.albedoIntensity = 1.0f;
   settings.normalStrength = 1.0f;
@@ -22,6 +28,12 @@ static ModelRenderSettings makeTreeSettings() {
   settings.useNormalMap = true;
   settings.doubleSided = true;
   settings.alphaCutoff = 0.4f;
+  return settings;
+}
+
+static ModelRenderSettings makeChurchSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
   return settings;
 }
 
@@ -35,6 +47,7 @@ static const ModelTemplate gModelTemplates[] = {
     {"Tree", "assets/models/tree/source/tree.fbx", makeTreeSettings()},
     {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
      makeWalterSettings()},
+    {"Church", "assets/models/church/source/church.fbx", makeChurchSettings()},
 };
 
 const ModelTemplate* GetModelTemplates(int* count) {
@@ -66,8 +79,7 @@ static std::string getFileName(const std::string& path) {
   return path.substr(lastSlash + 1);
 }
 
-static std::string joinPath(const std::string& base,
-                            const std::string& child) {
+static std::string joinPath(const std::string& base, const std::string& child) {
   if (child.empty()) {
     return base;
   }
@@ -79,8 +91,9 @@ static std::string joinPath(const std::string& base,
 
 static std::string toLower(const std::string& value) {
   std::string out = value;
-  std::transform(out.begin(), out.end(), out.begin(),
-                 [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+  std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
   return out;
 }
 
@@ -204,8 +217,7 @@ static unsigned int loadTextureFromFile(const std::string& path) {
   int channels = 0;
 
   stbi_set_flip_vertically_on_load(true);
-  unsigned char* data =
-      stbi_load(path.c_str(), &width, &height, &channels, 4);
+  unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
   stbi_set_flip_vertically_on_load(false);
 
   if (!data) {
@@ -230,9 +242,8 @@ static unsigned int loadTextureFromFile(const std::string& path) {
   return textureId;
 }
 
-static TextureInfo loadTextureByBaseName(
-    const std::string& baseName,
-    const std::string& texturesDirectory) {
+static TextureInfo loadTextureByBaseName(const std::string& baseName,
+                                         const std::string& texturesDirectory) {
   TextureInfo result;
   const char* extensions[] = {".png", ".jpg", ".jpeg"};
   for (const char* ext : extensions) {
@@ -306,13 +317,11 @@ static TextureInfo loadDiffuseTexture(const aiScene* scene, aiMesh* mesh,
     }
   }
 
-  TextureInfo result =
-      loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
-                          aiTextureType_DIFFUSE);
+  TextureInfo result = loadMaterialTexture(
+      scene, mesh, modelDirectory, texturesDirectory, aiTextureType_DIFFUSE);
   if (result.id == 0) {
-    result =
-        loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
-                            aiTextureType_BASE_COLOR);
+    result = loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
+                                 aiTextureType_BASE_COLOR);
   }
   if (result.id == 0) {
     result = loadTextureByBaseName(baseName, texturesDirectory);
@@ -339,13 +348,11 @@ static unsigned int loadNormalTexture(const aiScene* scene, aiMesh* mesh,
                                       const std::string& modelDirectory,
                                       const std::string& texturesDirectory,
                                       const std::string& diffusePath) {
-  TextureInfo result =
-      loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
-                          aiTextureType_NORMALS);
+  TextureInfo result = loadMaterialTexture(
+      scene, mesh, modelDirectory, texturesDirectory, aiTextureType_NORMALS);
   if (result.id == 0) {
-    result =
-        loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
-                            aiTextureType_HEIGHT);
+    result = loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
+                                 aiTextureType_HEIGHT);
   }
   if (result.id != 0) {
     return result.id;
@@ -374,9 +381,7 @@ static unsigned int loadNormalTexture(const aiScene* scene, aiMesh* mesh,
   return getDefaultNormalTexture();
 }
 
-Model::Model(const char* path) {
-  Load(path);
-}
+Model::Model(const char* path) { Load(path); }
 
 void Model::Shutdown() {
   unsigned int defaultDiffuse = getDefaultWhiteTexture();
@@ -449,9 +454,9 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
       }
       aiVector3D normal =
           mesh->HasNormals() ? mesh->mNormals[v] : aiVector3D(0.0f, 1.0f, 0.0f);
-      aiVector3D texCoord =
-          (uvChannel >= 0) ? mesh->mTextureCoords[uvChannel][v]
-                           : aiVector3D(0.0f, 0.0f, 0.0f);
+      aiVector3D texCoord = (uvChannel >= 0)
+                                ? mesh->mTextureCoords[uvChannel][v]
+                                : aiVector3D(0.0f, 0.0f, 0.0f);
       aiVector3D tangent = (mesh->HasTangentsAndBitangents())
                                ? mesh->mTangents[v]
                                : aiVector3D(1.0f, 0.0f, 0.0f);
@@ -499,9 +504,8 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
                  vertices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, outMesh.ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                 indices.size() * sizeof(unsigned int), indices.data(),
-                 GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
+                 indices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
                           (void*)0);

@@ -1,3 +1,9 @@
 CREDIT FOR ALL MODELS USED:
 
 TREE: This work is based on "Tree" (https://sketchfab.com/3d-models/tree-1d26dcc1af0c4a06a95c459b7ca4cf6f) by DJMaesen (https://sketchfab.com/bumstrum) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+WALTUH: https://sketchfab.com/3d-models/ps1-style-walter-white-0235c18fd3094d09a4131d153471e276
+CHURCH: https://sketchfab.com/3d-models/psx-church-e2b9dc5b5b1e4f979473ac8bab16c5e3
+WHITE VAN: https://sketchfab.com/3d-models/white-van-ps1-low-poly-1cac40905d494bae8108a556d870e23e
+DEAD TREE (NOT YET IN GAME): https://sketchfab.com/3d-models/dead-tree-ps1-low-poly-de2611ba107f4c3c8c89bf516d5d9b6b
+FLASHLIGHT: https://sketchfab.com/3d-models/flashlight-4776f56179af4891ac856316892c4cd8
+METAL BARREL: https://sketchfab.com/3d-models/ps1-style-metal-barrel-2e5ead524a4b49b9a17e33a123aeec46

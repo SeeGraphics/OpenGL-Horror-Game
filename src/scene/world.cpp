@@ -499,6 +499,13 @@ void updateGroundCollision(AppState& state) {
 void initWorldModels(AppState& state) {
   state.modelAssets.clear();
   state.modelInstances.clear();
+
+  // Check if model is loaded with "...AssetIndex"; -1 = not loaded
+  // Check if for instance; -1 = no instance was spawned
+  // Both declared in src/app.hpp
+  // ONLY needed if it needs to communicate with something else, e.g scale
+  // slider in imgui ui or respawn / culling, changing pos stuff like that.
+  // IF its just placed in the world then you dont need to add these vars.
   state.treeAssetIndex = -1;
   state.treeInstanceIndex = -1;
   state.walterAssetIndex = -1;
@@ -506,8 +513,11 @@ void initWorldModels(AppState& state) {
 
   int templateCount = 0;
   const ModelTemplate* templates = GetModelTemplates(&templateCount);
+
+  // Check if model loads temporarily/ local
   int treeAsset = -1;
   int walterAsset = -1;
+  int churchAsset = -1;
   for (int i = 0; i < templateCount; ++i) {
     const ModelTemplate& entry = templates[i];
     int assetIndex =
@@ -518,8 +528,12 @@ void initWorldModels(AppState& state) {
       treeAsset = assetIndex;
     } else if (entry.id && std::strcmp(entry.id, "WalterWhite") == 0) {
       walterAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "Church") == 0) {
+      churchAsset = assetIndex;
     }
   }
+  // now update those global assetIndexes with the local ones after we loaded
+  // them
   state.treeAssetIndex = treeAsset;
   state.walterAssetIndex = walterAsset;
   scatterTrees(state, treeAsset);
@@ -527,9 +541,16 @@ void initWorldModels(AppState& state) {
   // add test walter
   if (walterAsset >= 0) {
     float walterScale = 0.001f;
-    state.walterInstanceIndex = addModelInstance(
-        state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
-        glm::vec3(0.0f), glm::vec3(walterScale));
+    state.walterInstanceIndex =
+        addModelInstance(state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
+                         glm::vec3(0.0f), glm::vec3(walterScale));
+  }
+
+  // add test church
+  if (churchAsset >= 0) {
+    float churchScale = 0.1f;
+    addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
+                     glm::vec3(0.0f), glm::vec3(churchScale));
   }
 }
 

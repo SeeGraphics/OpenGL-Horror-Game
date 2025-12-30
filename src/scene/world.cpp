@@ -66,6 +66,18 @@ static int addModelInstance(AppState& state, int assetIndex,
   return static_cast<int>(state.modelInstances.size()) - 1;
 }
 
+static int findInstanceIndexByAsset(const AppState& state, int assetIndex) {
+  if (assetIndex < 0) {
+    return -1;
+  }
+  for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0; --i) {
+    if (state.modelInstances[i].assetIndex == assetIndex) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 static void scatterTrees(AppState& state, int assetIndex) {
   if (assetIndex < 0) {
     return;
@@ -510,6 +522,8 @@ void initWorldModels(AppState& state) {
   state.treeInstanceIndex = -1;
   state.walterAssetIndex = -1;
   state.walterInstanceIndex = -1;
+  state.flashlightAssetIndex = -1;
+  state.flashlightInstanceIndex = -1;
 
   int templateCount = 0;
   const ModelTemplate* templates = GetModelTemplates(&templateCount);
@@ -518,6 +532,7 @@ void initWorldModels(AppState& state) {
   int treeAsset = -1;
   int walterAsset = -1;
   int churchAsset = -1;
+  int flashlightAsset = -1;
   for (int i = 0; i < templateCount; ++i) {
     const ModelTemplate& entry = templates[i];
     int assetIndex =
@@ -530,12 +545,15 @@ void initWorldModels(AppState& state) {
       walterAsset = assetIndex;
     } else if (entry.id && std::strcmp(entry.id, "Church") == 0) {
       churchAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "Flashlight") == 0) {
+      flashlightAsset = assetIndex;
     }
   }
   // now update those global assetIndexes with the local ones after we loaded
   // them
   state.treeAssetIndex = treeAsset;
   state.walterAssetIndex = walterAsset;
+  state.flashlightAssetIndex = flashlightAsset;
   scatterTrees(state, treeAsset);
 
   // add test walter
@@ -551,6 +569,13 @@ void initWorldModels(AppState& state) {
     float churchScale = 0.1f;
     addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
                      glm::vec3(0.0f), glm::vec3(churchScale));
+  }
+
+  // add flashlight
+  if (flashlightAsset >= 0) {
+    state.flashlightInstanceIndex =
+        addModelInstance(state, flashlightAsset, state.camera.cameraPos,
+                         glm::vec3(0.0f), glm::vec3(state.flashlightScale));
   }
 }
 
@@ -583,4 +608,46 @@ void updateWorldModelHeights(AppState& state) {
         getTerrainHeightAt(state, instance.position.x, instance.position.z);
     instance.position.y = yPos;
   }
+}
+
+void updateFlashlightAttachment(AppState& state) {
+  if (state.flashlightAssetIndex < 0) {
+    return;
+  }
+
+  int instanceIndex = state.flashlightInstanceIndex;
+  if (instanceIndex < 0 ||
+      instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
+      state.modelInstances[instanceIndex].assetIndex !=
+          state.flashlightAssetIndex) {
+    instanceIndex = findInstanceIndexByAsset(state, state.flashlightAssetIndex);
+    state.flashlightInstanceIndex = instanceIndex;
+  }
+
+  if (instanceIndex < 0) {
+    return;
+  }
+
+  ModelInstance& instance = state.modelInstances[instanceIndex];
+
+  glm::vec3 forward = glm::normalize(state.camera.cameraFront);
+  glm::vec3 right = glm::cross(forward, state.camera.cameraUp);
+  if (glm::length(right) < 0.001f) {
+    right = glm::cross(state.camera.flatFront, state.camera.cameraUp);
+  }
+  right = glm::normalize(right);
+  glm::vec3 up = glm::normalize(glm::cross(right, forward));
+
+  float forwardOffset = state.cubeScale * state.flashlightOffsetForward;
+  float rightOffset = state.cubeScale * state.flashlightOffsetRight;
+  float downOffset = state.cubeScale * state.flashlightOffsetDown;
+  float yawOffset = 0.0f;
+  float pitchOffset = 0.0f;
+  float rollOffset = 0.0f;
+
+  glm::vec3 position = state.camera.cameraPos + (forward * forwardOffset) +
+                       (right * rightOffset) + (up * downOffset);
+  position.y += state.camera.visualBobOffset;
+  instance.position = position;
+  instance.rotation = glm::vec3(pitchOffset, yawOffset, rollOffset);
 }

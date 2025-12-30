@@ -10,5 +10,6 @@ float getTerrainHeightAt(const AppState& state, float worldX, float worldZ);
 void initWorldModels(AppState& state);
 void updateWorldModelHeights(AppState& state);
 void rebuildWorldTrees(AppState& state);
+void updateFlashlightAttachment(AppState& state);
 
 #endif

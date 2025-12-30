@@ -31,6 +31,12 @@ static ModelRenderSettings makeTreeSettings() {
   return settings;
 }
 
+static ModelRenderSettings makeFlashlightSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
 static ModelRenderSettings makeChurchSettings() {
   ModelRenderSettings settings;
   settings.flipUv = false;
@@ -48,6 +54,8 @@ static const ModelTemplate gModelTemplates[] = {
     {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
      makeWalterSettings()},
     {"Church", "assets/models/church/source/church.fbx", makeChurchSettings()},
+    {"Flashlight", "assets/models/flashlight/source/Flashlight.fbx",
+     makeFlashlightSettings()},
 };
 
 const ModelTemplate* GetModelTemplates(int* count) {

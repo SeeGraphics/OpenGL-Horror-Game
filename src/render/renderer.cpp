@@ -22,6 +22,70 @@ static void uploadGrassInstances(AppState& state);
 static void uploadTreeInstances(AppState& state);
 static void ensureRenderTarget(AppState& state, int framebufferWidth,
                                int framebufferHeight);
+static void buildCameraBasis(const AppState& state, glm::vec3& forward,
+                             glm::vec3& right, glm::vec3& up);
+static bool buildFlashlightModelMatrix(const AppState& state,
+                                       glm::mat4& modelMatrix);
+
+static void buildCameraBasis(const AppState& state, glm::vec3& forward,
+                             glm::vec3& right, glm::vec3& up) {
+  forward = glm::normalize(state.camera.cameraFront);
+  right = glm::cross(forward, state.camera.cameraUp);
+  if (glm::length(right) < 0.001f) {
+    right = glm::cross(state.camera.flatFront, state.camera.cameraUp);
+  }
+  right = glm::normalize(right);
+  up = glm::normalize(glm::cross(right, forward));
+}
+
+static bool buildFlashlightModelMatrix(const AppState& state,
+                                       glm::mat4& modelMatrix) {
+  if (state.flashlightAssetIndex < 0) {
+    return false;
+  }
+
+  int instanceIndex = state.flashlightInstanceIndex;
+  if (instanceIndex < 0 ||
+      instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
+      state.modelInstances[instanceIndex].assetIndex !=
+          state.flashlightAssetIndex) {
+    instanceIndex = -1;
+    for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
+         --i) {
+      if (state.modelInstances[i].assetIndex == state.flashlightAssetIndex) {
+        instanceIndex = i;
+        break;
+      }
+    }
+  }
+
+  if (instanceIndex < 0) {
+    return false;
+  }
+
+  const ModelInstance& instance = state.modelInstances[instanceIndex];
+
+  glm::vec3 forward;
+  glm::vec3 right;
+  glm::vec3 up;
+  buildCameraBasis(state, forward, right, up);
+
+  modelMatrix = glm::mat4(1.0f);
+  modelMatrix = glm::translate(modelMatrix, instance.position);
+  glm::mat4 basis = glm::mat4(1.0f);
+  basis[0] = glm::vec4(right, 0.0f);
+  basis[1] = glm::vec4(up, 0.0f);
+  basis[2] = glm::vec4(-forward, 0.0f);
+  modelMatrix *= basis;
+  modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
+                            glm::vec3(0.0f, 1.0f, 0.0f));
+  modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                            glm::vec3(1.0f, 0.0f, 0.0f));
+  modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
+                            glm::vec3(0.0f, 0.0f, 1.0f));
+  modelMatrix = glm::scale(modelMatrix, instance.scale);
+  return true;
+}
 
 bool renderInit(AppState& state, GLFWwindow* window) {
   // glad: load all OpenGL function pointers
@@ -287,6 +351,17 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   // flashlight spotlight
   glm::vec3 flashlightPos = state.camera.cameraPos;
   glm::vec3 flashlightDir = glm::normalize(state.camera.cameraFront);
+  glm::mat4 flashlightModel = glm::mat4(1.0f);
+  if (buildFlashlightModelMatrix(state, flashlightModel)) {
+    glm::vec3 localForward = state.flashlightBeamForward;
+    if (glm::length(localForward) < 0.001f) {
+      localForward = glm::vec3(0.0f, 0.0f, -1.0f);
+    }
+    flashlightPos = glm::vec3(
+        flashlightModel * glm::vec4(state.flashlightBeamOffset, 1.0f));
+    flashlightDir =
+        glm::normalize(glm::mat3(flashlightModel) * localForward);
+  }
   float flashlightInnerCutoff =
       glm::cos(glm::radians(state.flashlightRadius * 0.85f));
   float flashlightOuterCutoff = glm::cos(glm::radians(state.flashlightRadius));
@@ -401,12 +476,23 @@ void renderFrame(AppState& state, GLFWwindow* window) {
 
       glm::mat4 modelMatrix = glm::mat4(1.0f);
       modelMatrix = glm::translate(modelMatrix, instance.position);
-      modelMatrix =
-          glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
-                      glm::vec3(1.0f, 0.0f, 0.0f));
+      if (instance.assetIndex == state.flashlightAssetIndex) {
+        glm::vec3 forward;
+        glm::vec3 right;
+        glm::vec3 up;
+        buildCameraBasis(state, forward, right, up);
+        glm::mat4 basis = glm::mat4(1.0f);
+        basis[0] = glm::vec4(right, 0.0f);
+        basis[1] = glm::vec4(up, 0.0f);
+        basis[2] = glm::vec4(-forward, 0.0f);
+        modelMatrix *= basis;
+      }
       modelMatrix =
           glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
                       glm::vec3(0.0f, 1.0f, 0.0f));
+      modelMatrix =
+          glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                      glm::vec3(1.0f, 0.0f, 0.0f));
       modelMatrix =
           glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
                       glm::vec3(0.0f, 0.0f, 1.0f));
@@ -557,6 +643,8 @@ void renderShutdown(AppState& state) {
   state.treeInstanceIndex = -1;
   state.walterAssetIndex = -1;
   state.walterInstanceIndex = -1;
+  state.flashlightAssetIndex = -1;
+  state.flashlightInstanceIndex = -1;
 
   delete state.worldShader;
   state.worldShader = nullptr;
@@ -653,10 +741,10 @@ static void uploadTreeInstances(AppState& state) {
 
     glm::mat4 modelMatrix = glm::mat4(1.0f);
     modelMatrix = glm::translate(modelMatrix, instance.position);
-    modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
-                              glm::vec3(1.0f, 0.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
                               glm::vec3(0.0f, 1.0f, 0.0f));
+    modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                              glm::vec3(1.0f, 0.0f, 0.0f));
     modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
                               glm::vec3(0.0f, 0.0f, 1.0f));
     modelMatrix = glm::scale(modelMatrix, instance.scale);

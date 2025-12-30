@@ -50,6 +50,16 @@ void drawDebugUi(AppState& state) {
                      10.0f);
   ImGui::SliderFloat("Flashlight Radius (deg)", &state.flashlightRadius, 1.0f,
                      60.0f);
+  ImGui::SliderFloat("Flashlight Offset Forward",
+                     &state.flashlightOffsetForward, -2.0f, 2.0f);
+  ImGui::SliderFloat("Flashlight Offset Right", &state.flashlightOffsetRight,
+                     -2.0f, 2.0f);
+  ImGui::SliderFloat("Flashlight Offset Down", &state.flashlightOffsetDown,
+                     -2.0f, 2.0f);
+  ImGui::SliderFloat3("Flashlight Beam Offset",
+                      &state.flashlightBeamOffset.x, -2.0f, 2.0f);
+  ImGui::SliderFloat3("Flashlight Beam Forward",
+                      &state.flashlightBeamForward.x, -1.0f, 1.0f);
   ImGui::SliderFloat("Fog", &state.fogDensity, 0.0f, 0.50f);
   if (ImGui::SliderFloat("Heightmap Scale", &state.heightmapScale, 0.0f,
                          50.0f)) {

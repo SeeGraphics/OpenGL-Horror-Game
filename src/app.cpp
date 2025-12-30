@@ -62,6 +62,7 @@ void AppFrame(AppState& state, GLFWwindow* window) {
   }
 
   updateGroundCollision(state);
+  updateFlashlightAttachment(state);
 
   if (!state.freeCam && !wasGrounded && state.camera.isGrounded) {
     playSound(state.audio, SoundId::LandingOnGrass);

@@ -8,7 +8,8 @@ enum class SoundId {
   RunningGrass,
   StepOnGrass,
   LandingOnGrass,
-  NightForestAmbient,
+  // NightForestAmbient,
+  //  MysticalForestAmbient,
   Count
 };
 
@@ -16,9 +17,11 @@ inline constexpr int soundCount = static_cast<int>(SoundId::Count);
 
 struct AudioPaths {
   const char* sounds[soundCount] = {
-      "assets/sounds/flashlightToggle.mp3", "assets/sounds/running_grass.mp3",
-      "assets/sounds/step_on_grass.mp3", "assets/sounds/landing_on_grass.mp3",
-      "assets/sounds/night_forest_ambient.mp3"};
+      "assets/sounds/flashlightToggle.wav",
+      "assets/sounds/running.wav",
+      "assets/sounds/walking.wav",
+      "assets/sounds/landing_on_grass.wav",
+  };
 };
 
 struct AudioSystem {

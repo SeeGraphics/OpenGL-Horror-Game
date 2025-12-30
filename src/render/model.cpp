@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -329,6 +330,7 @@ void Model::Shutdown() {
   }
   meshes.clear();
   isLoaded = false;
+  boundingRadius = 0.0f;
 }
 
 void Model::Load(const char* path) {
@@ -360,6 +362,7 @@ void Model::Load(const char* path) {
       joinPath(getDirectory(modelDirectory), "textures");
 
   meshes.reserve(scene->mNumMeshes);
+  float maxRadiusSq = 0.0f;
   for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
     aiMesh* mesh = scene->mMeshes[meshIndex];
     if (!mesh) continue;
@@ -377,6 +380,10 @@ void Model::Load(const char* path) {
 
     for (unsigned int v = 0; v < mesh->mNumVertices; ++v) {
       aiVector3D pos = mesh->mVertices[v];
+      float radiusSq = (pos.x * pos.x) + (pos.y * pos.y) + (pos.z * pos.z);
+      if (radiusSq > maxRadiusSq) {
+        maxRadiusSq = radiusSq;
+      }
       aiVector3D normal =
           mesh->HasNormals() ? mesh->mNormals[v] : aiVector3D(0.0f, 1.0f, 0.0f);
       aiVector3D texCoord =
@@ -451,6 +458,7 @@ void Model::Load(const char* path) {
   }
 
   isLoaded = !meshes.empty();
+  boundingRadius = (maxRadiusSq > 0.0f) ? std::sqrt(maxRadiusSq) : 0.0f;
   if (isLoaded) {
     std::cout << "Model loaded: " << modelPath << std::endl;
   }

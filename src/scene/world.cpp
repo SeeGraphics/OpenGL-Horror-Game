@@ -155,7 +155,7 @@ static void resolveTreeCollisions(AppState& state) {
     return;
   }
 
-  float treeRadius = state.cubeScale * 0.25f;
+  float treeRadius = state.cubeScale * 0.19f;
   float playerRadius = state.cubeScale * 0.35f;
   float combinedRadius = treeRadius + playerRadius;
   float combinedRadiusSq = combinedRadius * combinedRadius;
@@ -264,9 +264,21 @@ float getTerrainHeightAt(const AppState& state, float worldX, float worldZ) {
 }
 
 void buildFloor(AppState& state) {
-  int gridSize = state.floorSize * 2;
-  float tileSize = state.cubeScale;
-  float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;
+  float resolutionScale = state.terrainResolutionScale;
+  if (resolutionScale < 0.1f) {
+    resolutionScale = 0.1f;
+  }
+  float worldSize = static_cast<float>(state.floorSize) * 2.0f *
+                    state.cubeScale;
+  int gridSize = static_cast<int>(
+      std::round((static_cast<float>(state.floorSize) * 2.0f) /
+                 resolutionScale));
+  if (gridSize < 1) {
+    gridSize = 1;
+  }
+  float tileSize = worldSize / static_cast<float>(gridSize);
+  float start =
+      (-static_cast<float>(state.floorSize) - 0.5f) * state.cubeScale;
   int vertCount = gridSize + 1;
 
   state.terrainVertices.clear();
@@ -365,12 +377,11 @@ void buildGrass(AppState& state) {
     return;
   }
 
-  float nearRadius = state.grassNearRadius;
-  float farRadius = state.grassFarRadius;
-  if (nearRadius < 0.0f) nearRadius = 0.0f;
-  if (farRadius < nearRadius) farRadius = nearRadius;
 
-  if (farRadius <= 0.0f) {
+  float radius = state.grassRenderRadius;
+  if (radius < 0.0f) radius = 0.0f;
+
+  if (radius <= 0.0f) {
     return;
   }
 
@@ -378,10 +389,10 @@ void buildGrass(AppState& state) {
   float centerZ = state.camera.cameraPos.z;
   state.grassCenter = glm::vec2(centerX, centerZ);
 
-  float minXf = ((centerX - farRadius) - start) / tileSize - 0.5f;
-  float maxXf = ((centerX + farRadius) - start) / tileSize - 0.5f;
-  float minZf = ((centerZ - farRadius) - start) / tileSize - 0.5f;
-  float maxZf = ((centerZ + farRadius) - start) / tileSize - 0.5f;
+  float minXf = ((centerX - radius) - start) / tileSize - 0.5f;
+  float maxXf = ((centerX + radius) - start) / tileSize - 0.5f;
+  float minZf = ((centerZ - radius) - start) / tileSize - 0.5f;
+  float maxZf = ((centerZ + radius) - start) / tileSize - 0.5f;
   int minX = static_cast<int>(std::floor(minXf));
   int maxX = static_cast<int>(std::floor(maxXf));
   int minZ = static_cast<int>(std::floor(minZf));
@@ -402,9 +413,7 @@ void buildGrass(AppState& state) {
   state.grassInstances.reserve(tileCount *
                                static_cast<size_t>(maxInstancesPerTile));
 
-  float nearRadiusSq = nearRadius * nearRadius;
-  float farRadiusSq = farRadius * farRadius;
-  float falloffSpan = farRadius - nearRadius;
+  float radiusSq = radius * radius;
 
   for (int z = minZ; z <= maxZ; ++z) {
     float tileCenterZ = start + (static_cast<float>(z) + 0.5f) * tileSize;
@@ -414,20 +423,11 @@ void buildGrass(AppState& state) {
       float dz = tileCenterZ - centerZ;
       float distSq = dx * dx + dz * dz;
 
-      if (distSq > farRadiusSq) {
+      if (distSq > radiusSq) {
         continue;
       }
 
-      float densityScale = 1.0f;
-      if (distSq > nearRadiusSq && falloffSpan > 0.0f) {
-        float distance = std::sqrt(distSq);
-        float t = (distance - nearRadius) / falloffSpan;
-        if (t < 0.0f) t = 0.0f;
-        if (t > 1.0f) t = 1.0f;
-        densityScale = 1.0f + (state.grassMidDensity - 1.0f) * t;
-      }
-
-      float tileDensity = density * densityScale;
+      float tileDensity = density;
       if (tileDensity <= 0.0f) {
         continue;
       }

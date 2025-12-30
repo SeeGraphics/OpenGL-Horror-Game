@@ -1,8 +1,8 @@
+#include <dirent.h>
 #include <sys/stat.h>
 
 #include <cstdlib>
 #include <cstring>
-#include <dirent.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -81,8 +81,8 @@ int main(int argc, char** argv) {
 
   time_t srcHeaderTime = getLatestHeaderTime("src");
   time_t thirdPartyHeaderTime = getLatestHeaderTime("third_party");
-  gHeaderTime =
-      (srcHeaderTime > thirdPartyHeaderTime) ? srcHeaderTime : thirdPartyHeaderTime;
+  gHeaderTime = (srcHeaderTime > thirdPartyHeaderTime) ? srcHeaderTime
+                                                       : thirdPartyHeaderTime;
 
   run_cmd("mkdir -p build");
 

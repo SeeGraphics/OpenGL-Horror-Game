@@ -59,11 +59,7 @@ void drawDebugUi(AppState& state) {
   if (ImGui::SliderFloat("Grass Density", &state.grassDensity, 0.0f, 5.0f)) {
     state.grassDirty = true;
   }
-  if (ImGui::SliderFloat("Grass Near Radius", &state.grassNearRadius, 0.0f,
-                         state.renderDistance)) {
-    state.grassDirty = true;
-  }
-  if (ImGui::SliderFloat("Grass Far Radius", &state.grassFarRadius, 0.0f,
+  if (ImGui::SliderFloat("Grass Radius", &state.grassRenderRadius, 0.0f,
                          state.renderDistance)) {
     state.grassDirty = true;
   }

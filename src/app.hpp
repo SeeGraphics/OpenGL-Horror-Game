@@ -19,8 +19,11 @@ struct AppState {
 
   int floorSize = 500;
   float floorY = -1.0f;
+  float terrainResolutionScale = 4.0f;  // more chunky floor / terrain
 
   float renderDistance = 1000.0f;
+  float renderScale =
+      0.25f;  // makes game look like shit but run good, embrace ps1 graphics ig
 
   float ambientStrength = 1.55f;  // dark: 0.05f, increased for testing
   float diffuseStrength = 0.35f;
@@ -37,15 +40,13 @@ struct AppState {
   bool terrainDirty = true;
   float grassDensity = 0.05f;
   float grassIntensity = 0.4f;
-  float grassNearRadius = 35.0f;
-  float grassFarRadius = 90.0f;
-  float grassMidDensity = 0.35f;
+  float grassRenderRadius = 90.0f;
   bool grassDirty = true;
   glm::vec2 grassCenter = glm::vec2(0.0f);
   float treeDensity = 0.02f;
   bool treeDirty = false;
   bool treeInstanceDirty = false;
-  float treeRenderRadius = 80.0f;
+  float treeRenderRadius = 60.0f;
   float treeUpdateDistance = 6.0f;
   glm::vec2 treeCullCenter = glm::vec2(0.0f);
   float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
@@ -82,6 +83,11 @@ struct AppState {
   unsigned int treeInstanceVBO = 0;
   int treeInstanceCount = 0;
   std::vector<glm::vec3> treeCollisionPositions;
+  unsigned int renderTargetFbo = 0;
+  unsigned int renderTargetColor = 0;
+  unsigned int renderTargetDepth = 0;
+  int renderTargetWidth = 0;
+  int renderTargetHeight = 0;
 
   std::vector<float> terrainVertices;
   std::vector<unsigned int> terrainIndices;

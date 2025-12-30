@@ -25,11 +25,13 @@ class Model {
   const std::string& GetPath() const { return modelPath; }
   bool IsLoaded() const { return isLoaded; }
   const std::vector<ModelMesh>& GetMeshes() const { return meshes; }
+  float GetBoundingRadius() const { return boundingRadius; }
 
  private:
   std::string modelPath;
   bool isLoaded = false;
   std::vector<ModelMesh> meshes;
+  float boundingRadius = 0.0f;
 };
 
 struct ModelRenderSettings {

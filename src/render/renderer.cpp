@@ -20,9 +20,10 @@ static unsigned int loadCubemap(const std::vector<std::string>& faces);
 static void uploadTerrainBuffers(AppState& state);
 static void uploadGrassInstances(AppState& state);
 static void uploadTreeInstances(AppState& state);
+static void ensureRenderTarget(AppState& state, int framebufferWidth,
+                               int framebufferHeight);
 
 bool renderInit(AppState& state, GLFWwindow* window) {
-  (void)window;
   // glad: load all OpenGL function pointers
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
@@ -36,6 +37,10 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  int framebufferWidth = 0;
+  int framebufferHeight = 0;
+  glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
+  ensureRenderTarget(state, framebufferWidth, framebufferHeight);
 
   // build and compile shader programs
   state.worldShader = new Shader("Shader/default.vs", "Shader/default.fs");
@@ -185,6 +190,13 @@ bool renderInit(AppState& state, GLFWwindow* window) {
 }
 
 void renderFrame(AppState& state, GLFWwindow* window) {
+  int framebufferWidth = 0;
+  int framebufferHeight = 0;
+  glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
+  ensureRenderTarget(state, framebufferWidth, framebufferHeight);
+  glBindFramebuffer(GL_FRAMEBUFFER, state.renderTargetFbo);
+  glViewport(0, 0, state.renderTargetWidth, state.renderTargetHeight);
+
   if (state.terrainDirty) {
     buildFloor(state);
     uploadTerrainBuffers(state);
@@ -236,20 +248,12 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glBindTexture(GL_TEXTURE_2D, state.texture);
 
   // Matrices
-  // global space
   glm::mat4 model = glm::mat4(1.0f);
-
-  // view matrix
   glm::mat4 view = state.camera.GetViewMatrix();
-
-  // projection matrix
-  int width, height;
-  glfwGetFramebufferSize(window, &width, &height);
-
-  // Ensure we don't divide by zero if window is minimized
-  float aspect = (height > 0) ? (float)width / (float)height : 1.0f;
-
-  // Use the dynamic aspect ratio
+  int renderWidth = state.renderTargetWidth;
+  int renderHeight = state.renderTargetHeight;
+  float aspect =
+      (renderHeight > 0) ? (float)renderWidth / (float)renderHeight : 1.0f;
   glm::mat4 projection =
       glm::perspective(glm::radians(60.0f), aspect, 0.1f, state.renderDistance);
 
@@ -352,33 +356,14 @@ void renderFrame(AppState& state, GLFWwindow* window) {
         glUniform1i(
             glGetUniformLocation(state.worldShader->ID, "useInstancing"), 1);
         glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"),
-                    1);
-
+                    0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
+                    settings.useNormalMap ? 1 : 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
+                    settings.useNormalMap ? 1 : 0);
         glm::mat4 identity = glm::mat4(1.0f);
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
                            glm::value_ptr(identity));
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        glDepthFunc(GL_LESS);
-        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
-                    0);
-        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
-                    0);
-        for (const ModelMesh& mesh : asset.model.GetMeshes()) {
-          glActiveTexture(GL_TEXTURE0);
-          glBindTexture(GL_TEXTURE_2D, mesh.texture);
-          glBindVertexArray(mesh.vao);
-          glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
-                                  GL_UNSIGNED_INT, 0,
-                                  state.treeInstanceCount);
-        }
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        glDepthFunc(GL_LEQUAL);
-        glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"),
-                    0);
-        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
-                    settings.useNormalMap ? 1 : 0);
-        glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
-                    settings.useNormalMap ? 1 : 0);
         for (const ModelMesh& mesh : asset.model.GetMeshes()) {
           glActiveTexture(GL_TEXTURE0);
           glBindTexture(GL_TEXTURE_2D, mesh.texture);
@@ -391,7 +376,6 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                                   GL_UNSIGNED_INT, 0,
                                   state.treeInstanceCount);
         }
-        glDepthFunc(GL_LESS);
         drewTrees = true;
       }
     }
@@ -536,6 +520,14 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glBindTexture(GL_TEXTURE_CUBE_MAP, state.cubemapTexture);
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glDepthFunc(GL_LESS);  // Reset
+
+  glBindFramebuffer(GL_READ_FRAMEBUFFER, state.renderTargetFbo);
+  glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+  glBlitFramebuffer(0, 0, state.renderTargetWidth, state.renderTargetHeight, 0,
+                    0, framebufferWidth, framebufferHeight,
+                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glViewport(0, 0, framebufferWidth, framebufferHeight);
 }
 
 void renderShutdown(AppState& state) {
@@ -552,6 +544,10 @@ void renderShutdown(AppState& state) {
   if (state.grassEBO) glDeleteBuffers(1, &state.grassEBO);
   if (state.grassInstanceVBO) glDeleteBuffers(1, &state.grassInstanceVBO);
   if (state.treeInstanceVBO) glDeleteBuffers(1, &state.treeInstanceVBO);
+  if (state.renderTargetColor) glDeleteTextures(1, &state.renderTargetColor);
+  if (state.renderTargetDepth)
+    glDeleteRenderbuffers(1, &state.renderTargetDepth);
+  if (state.renderTargetFbo) glDeleteFramebuffers(1, &state.renderTargetFbo);
   for (ModelAsset& asset : state.modelAssets) {
     asset.model.Shutdown();
   }
@@ -706,4 +702,67 @@ static void uploadTreeInstances(AppState& state) {
   glBindBuffer(GL_ARRAY_BUFFER, 0);
   state.treeCullCenter = glm::vec2(centerX, centerZ);
   state.treeInstanceDirty = false;
+}
+
+static void ensureRenderTarget(AppState& state, int framebufferWidth,
+                               int framebufferHeight) {
+  float scale = state.renderScale;
+  if (scale <= 0.0f) {
+    scale = 1.0f;
+  }
+  int targetWidth = static_cast<int>(framebufferWidth * scale);
+  int targetHeight = static_cast<int>(framebufferHeight * scale);
+  if (targetWidth < 1) {
+    targetWidth = 1;
+  }
+  if (targetHeight < 1) {
+    targetHeight = 1;
+  }
+  if (state.renderTargetFbo != 0 &&
+      targetWidth == state.renderTargetWidth &&
+      targetHeight == state.renderTargetHeight) {
+    return;
+  }
+
+  if (state.renderTargetColor) {
+    glDeleteTextures(1, &state.renderTargetColor);
+    state.renderTargetColor = 0;
+  }
+  if (state.renderTargetDepth) {
+    glDeleteRenderbuffers(1, &state.renderTargetDepth);
+    state.renderTargetDepth = 0;
+  }
+  if (state.renderTargetFbo) {
+    glDeleteFramebuffers(1, &state.renderTargetFbo);
+    state.renderTargetFbo = 0;
+  }
+
+  glGenFramebuffers(1, &state.renderTargetFbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, state.renderTargetFbo);
+
+  glGenTextures(1, &state.renderTargetColor);
+  glBindTexture(GL_TEXTURE_2D, state.renderTargetColor);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, targetWidth, targetHeight, 0,
+               GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         state.renderTargetColor, 0);
+
+  glGenRenderbuffers(1, &state.renderTargetDepth);
+  glBindRenderbuffer(GL_RENDERBUFFER, state.renderTargetDepth);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, targetWidth,
+                        targetHeight);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
+                            GL_RENDERBUFFER, state.renderTargetDepth);
+
+  if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+    std::cout << "Render target incomplete" << std::endl;
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+  state.renderTargetWidth = targetWidth;
+  state.renderTargetHeight = targetHeight;
 }

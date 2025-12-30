@@ -3,8 +3,8 @@
 #include <iostream>
 
 static bool loadSound(AudioSystem& audio, const char* path, ma_sound& sound) {
-  ma_result result = ma_sound_init_from_file(&audio.engine, path, 0, NULL, NULL,
-                                             &sound);
+  ma_result result =
+      ma_sound_init_from_file(&audio.engine, path, 0, NULL, NULL, &sound);
   return result == MA_SUCCESS;
 }
 
@@ -31,12 +31,15 @@ bool initAudio(AudioSystem& audio) {
     }
   }
 
-  ma_sound_set_looping(
-      &audio.sounds[static_cast<int>(SoundId::RunningGrass)], MA_TRUE);
-  ma_sound_set_looping(
-      &audio.sounds[static_cast<int>(SoundId::StepOnGrass)], MA_TRUE);
-  ma_sound_set_looping(
-      &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], MA_TRUE);
+  ma_sound_set_looping(&audio.sounds[static_cast<int>(SoundId::RunningGrass)],
+                       MA_TRUE);
+  ma_sound_set_looping(&audio.sounds[static_cast<int>(SoundId::StepOnGrass)],
+                       MA_TRUE);
+  // ma_sound_set_looping(
+  //     &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], MA_TRUE);
+  //  ma_sound_set_looping(
+  //      &audio.sounds[static_cast<int>(SoundId::MysticalForestAmbient)],
+  //      MA_TRUE);
 
   audio.initialized = true;
   ma_engine_set_volume(&audio.engine, audio.masterVolume);

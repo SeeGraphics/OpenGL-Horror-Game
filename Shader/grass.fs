@@ -22,7 +22,7 @@ uniform float fogDensity;
 
 void main() {
     vec4 texColor = texture(grassTexture, TexCoord);
-    if (texColor.a < 0.3) {
+    if (texColor.a < 0.6) {
         discard;
     }
 

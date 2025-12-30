@@ -33,7 +33,7 @@ bool AppInit(AppState& state, GLFWwindow* window) {
   if (!initAudio(state.audio)) {
     return false;
   }
-  startLoopingSound(state.audio, SoundId::NightForestAmbient);
+  // startLoopingSound(state.audio, SoundId::NightForestAmbient);
 
   glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 

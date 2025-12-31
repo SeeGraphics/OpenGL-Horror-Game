@@ -19,14 +19,12 @@
 // ps1 style models. Some models need settings.flipUv off to load the texture
 // correctly. dont ask me why its flipped by default :P
 
+// SET MODEL SETTINGS
+// ------------------------
 static ModelRenderSettings makeTreeSettings() {
   // most these arent that importan
   ModelRenderSettings settings;
-  settings.albedoIntensity = 1.0f;
-  settings.normalStrength = 1.0f;
-  settings.normalDebug = false;
-  settings.useNormalMap = true;
-  settings.doubleSided = true;
+  settings.flipUv = false;
   settings.alphaCutoff = 0.4f;
   return settings;
 }
@@ -49,13 +47,23 @@ static ModelRenderSettings makeWalterSettings() {
   return settings;
 }
 
+static ModelRenderSettings makeDeadTreeSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
 static const ModelTemplate gModelTemplates[] = {
-    {"Tree", "assets/models/tree/source/tree.fbx", makeTreeSettings()},
+    {"Tree", "assets/models/pine_tree/source/pine_tree.fbx",
+     makeTreeSettings()},
     {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
      makeWalterSettings()},
     {"Church", "assets/models/church/source/church.fbx", makeChurchSettings()},
     {"Flashlight", "assets/models/flashlight/source/Flashlight.fbx",
      makeFlashlightSettings()},
+    {"Dead_Tree", "assets/models/dead_tree/source/dead_tree.fbx",
+     makeDeadTreeSettings()},
+
 };
 
 const ModelTemplate* GetModelTemplates(int* count) {

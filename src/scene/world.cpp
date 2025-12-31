@@ -533,6 +533,8 @@ void initWorldModels(AppState& state) {
   int walterAsset = -1;
   int churchAsset = -1;
   int flashlightAsset = -1;
+  int deadtreeAsset = -1;
+
   for (int i = 0; i < templateCount; ++i) {
     const ModelTemplate& entry = templates[i];
     int assetIndex =
@@ -547,14 +549,20 @@ void initWorldModels(AppState& state) {
       churchAsset = assetIndex;
     } else if (entry.id && std::strcmp(entry.id, "Flashlight") == 0) {
       flashlightAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "Dead_Tree") == 0) {
+      deadtreeAsset = assetIndex;
     }
   }
+
   // now update those global assetIndexes with the local ones after we loaded
   // them
   state.treeAssetIndex = treeAsset;
   state.walterAssetIndex = walterAsset;
   state.flashlightAssetIndex = flashlightAsset;
   scatterTrees(state, treeAsset);
+
+  // PLACE MODELS IN WORLD
+  // ----------------------
 
   // add test walter
   if (walterAsset >= 0) {
@@ -576,6 +584,12 @@ void initWorldModels(AppState& state) {
     state.flashlightInstanceIndex =
         addModelInstance(state, flashlightAsset, state.camera.cameraPos,
                          glm::vec3(0.0f), glm::vec3(state.flashlightScale));
+  }
+
+  // add dead_tree
+  if (deadtreeAsset >= 0) {
+    addModelInstance(state, deadtreeAsset, glm::vec3(20.0f, 50.0f, -16.0f),
+                     glm::vec3(0.0f), glm::vec3(0.01));
   }
 }
 

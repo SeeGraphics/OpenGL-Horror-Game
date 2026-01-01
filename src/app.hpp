@@ -46,6 +46,7 @@ struct AppState {
   float flashlightOffsetDown = -0.12f;
   glm::vec3 flashlightBeamOffset = glm::vec3(0.0f);
   glm::vec3 flashlightBeamForward = glm::vec3(0.0f, 0.0f, -1.0f);
+  bool flashlightShown = true;
 
   // FOG
   float fogDensity = 0.02f;

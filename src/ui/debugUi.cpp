@@ -2,6 +2,8 @@
 
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
+
 #include "app.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -149,29 +151,87 @@ void drawDebugUi(AppState& state) {
 }
 
 void drawMapEditorUi(AppState& state) {
-  // menu to add models
   ImGui::Begin("Models");
-  if (ImGui::Button("Tree")) {
-    addModelInstance(state, state.treeAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
-                     glm::vec3(0.0f), glm::vec3(state.treeScale));
+
+  if (ImGui::BeginTable("ModelSpawnTable", 2,
+                        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+                            ImGuiTableFlags_BordersInnerV)) {
+    ImGui::TableSetupColumn("Model", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableHeadersRow();
+
+    // lambda to get models
+    auto spawnRow = [&](const char* label, int assetIndex,
+                        const glm::vec3& scale) {
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
+      ImGui::TextUnformatted(label);
+      ImGui::TableSetColumnIndex(1);
+
+      bool canSpawn = assetIndex >= 0;
+      ImGui::BeginDisabled(!canSpawn);
+      ImGui::PushID(label);
+      // place the model
+      if (ImGui::Button("Spawn")) {
+        addModelInstance(state, assetIndex, glm::vec3(state.camera.cameraPos),
+                         glm::vec3(0.0f), scale, true);
+      }
+      ImGui::PopID();
+      ImGui::EndDisabled();
+    };
+
+    spawnRow("Tree", state.treeAssetIndex, glm::vec3(state.treeScale));
+    spawnRow("Walter", state.walterAssetIndex, glm::vec3(state.walterScale));
+    spawnRow("Church", state.churchAssetIndex, glm::vec3(state.churchScale));
+    spawnRow("Flashlight", state.flashlightAssetIndex,
+             glm::vec3(state.flashlightScale));
+    spawnRow("Dead Tree", state.deadtreeAssetIndex,
+             glm::vec3(state.deadtreeScale));
+
+    ImGui::EndTable();
   }
-  if (ImGui::Button("Walter")) {
-    addModelInstance(state, state.walterAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
-                     glm::vec3(0.0f), glm::vec3(state.walterScale));
+
+  // Remove the most recent editor-placed instance.
+  // Note: editor trees are still rendered through the instanced tree buffer,
+  // so we flag treeInstanceDirty to rebuild that buffer immediately.
+  if (ImGui::Button("Delete Last Editor Model")) {
+    bool removedTree = false;
+    for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
+         --i) {
+      const ModelInstance& instance = state.modelInstances[i];
+      if (!instance.isEditorPlaced) {
+        continue;
+      }
+      removedTree = instance.assetIndex == state.treeAssetIndex;
+      state.modelInstances.erase(state.modelInstances.begin() + i);
+      break;
+    }
+    if (removedTree) {
+      // Forces uploadTreeInstances() to rebuild with the deleted tree removed.
+      state.treeInstanceDirty = true;
+    }
   }
-  if (ImGui::Button("Church")) {
-    addModelInstance(state, state.churchAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
-                     glm::vec3(0.0f), glm::vec3(state.churchScale));
-  }
-  if (ImGui::Button("Flashlight")) {
-    addModelInstance(state, state.flashlightAssetIndex,
-                     glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f),
-                     glm::vec3(state.flashlightScale));
-  }
-  if (ImGui::Button("Dead Tree")) {
-    addModelInstance(state, state.deadtreeAssetIndex,
-                     glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f),
-                     glm::vec3(state.deadtreeScale));
+
+  if (ImGui::Button("Clear Editor Models")) {
+    // We check for editor-placed trees before removing, so we know whether to
+    // rebuild the instanced tree buffer after the clear.
+    bool hasEditorTree = false;
+    for (const ModelInstance& instance : state.modelInstances) {
+      if (instance.isEditorPlaced &&
+          instance.assetIndex == state.treeAssetIndex) {
+        hasEditorTree = true;
+        break;
+      }
+    }
+    auto newEnd = std::remove_if(
+        state.modelInstances.begin(), state.modelInstances.end(),
+        [](const ModelInstance& instance) { return instance.isEditorPlaced; });
+    // Erase the tail that remove_if() moved to the end.
+    state.modelInstances.erase(newEnd, state.modelInstances.end());
+    if (hasEditorTree) {
+      // Any editor tree removed means the instanced list needs a refresh.
+      state.treeInstanceDirty = true;
+    }
   }
 
   ImGui::End();

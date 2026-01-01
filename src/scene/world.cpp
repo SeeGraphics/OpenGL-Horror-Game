@@ -50,7 +50,8 @@ static int addModelAsset(AppState& state, const char* id, const char* path,
 }
 
 int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
-                     const glm::vec3& rotation, const glm::vec3& scale) {
+                     const glm::vec3& rotation, const glm::vec3& scale,
+                     bool isEditorPlaced) {
   if (assetIndex < 0 ||
       assetIndex >= static_cast<int>(state.modelAssets.size())) {
     return -1;
@@ -61,16 +62,20 @@ int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
   instance.position = position;
   instance.rotation = rotation;
   instance.scale = scale;
+  instance.isEditorPlaced = isEditorPlaced;
   state.modelInstances.push_back(instance);
   return static_cast<int>(state.modelInstances.size()) - 1;
 }
 
-static int findInstanceIndexByAsset(const AppState& state, int assetIndex) {
+static int findInstanceIndexByAsset(const AppState& state, int assetIndex,
+                                    bool requireNonEditor) {
   if (assetIndex < 0) {
     return -1;
   }
   for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0; --i) {
-    if (state.modelInstances[i].assetIndex == assetIndex) {
+    const ModelInstance& instance = state.modelInstances[i];
+    if (instance.assetIndex == assetIndex &&
+        (!requireNonEditor || !instance.isEditorPlaced)) {
       return i;
     }
   }
@@ -147,7 +152,8 @@ static void scatterTrees(AppState& state, int assetIndex) {
             baseScale * (1.0f - scaleJitter + (scaleRand * scaleJitter * 2.0f));
 
         addModelInstance(state, assetIndex, glm::vec3(xPos, yPos, zPos),
-                         glm::vec3(0.0f, rotationY, 0.0f), glm::vec3(scale));
+                         glm::vec3(0.0f, rotationY, 0.0f), glm::vec3(scale),
+                         false);
         spawned++;
       }
     }
@@ -571,32 +577,36 @@ void initWorldModels(AppState& state) {
   // ----------------------
 
   // add test walter
-  if (walterAsset >= 0) {
-    state.walterInstanceIndex =
-        addModelInstance(state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
-                         glm::vec3(0.0f), glm::vec3(state.walterScale));
-  }
-
-  // add test church
-  if (churchAsset >= 0) {
-    state.churchInstanceIndex =
-        addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
-                         glm::vec3(0.0f), glm::vec3(state.churchScale));
-  }
+  // if (walterAsset >= 0) {
+  //   state.walterInstanceIndex =
+  //       addModelInstance(state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
+  //                        glm::vec3(0.0f), glm::vec3(state.walterScale),
+  //                        false);
+  // }
+  //
+  // // add test church
+  // if (churchAsset >= 0) {
+  //   state.churchInstanceIndex =
+  //       addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
+  //                        glm::vec3(0.0f), glm::vec3(state.churchScale),
+  //                        false);
+  // }
 
   // add flashlight
   if (flashlightAsset >= 0) {
-    state.flashlightInstanceIndex =
-        addModelInstance(state, flashlightAsset, state.camera.cameraPos,
-                         glm::vec3(0.0f), glm::vec3(state.flashlightScale));
+    state.flashlightInstanceIndex = addModelInstance(
+        state, flashlightAsset, state.camera.cameraPos, glm::vec3(0.0f),
+        glm::vec3(state.flashlightScale), false);
   }
 
-  // add dead_tree 0.01f is the scale
-  if (deadtreeAsset >= 0) {
-    state.deadtreeInstanceIndex =
-        addModelInstance(state, deadtreeAsset, glm::vec3(20.0f, 50.0f, -16.0f),
-                         glm::vec3(0.0f), glm::vec3(state.deadtreeScale));
-  }
+  // // add dead_tree 0.01f is the scale
+  // if (deadtreeAsset >= 0) {
+  //   state.deadtreeInstanceIndex =
+  //       addModelInstance(state, deadtreeAsset, glm::vec3(20.0f, 50.0f,
+  //       -16.0f),
+  //                        glm::vec3(0.0f), glm::vec3(state.deadtreeScale),
+  //                        false);
+  // }
 }
 
 void rebuildWorldTrees(AppState& state) {
@@ -639,8 +649,10 @@ void updateFlashlightAttachment(AppState& state) {
   if (instanceIndex < 0 ||
       instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
       state.modelInstances[instanceIndex].assetIndex !=
-          state.flashlightAssetIndex) {
-    instanceIndex = findInstanceIndexByAsset(state, state.flashlightAssetIndex);
+          state.flashlightAssetIndex ||
+      state.modelInstances[instanceIndex].isEditorPlaced) {
+    instanceIndex =
+        findInstanceIndexByAsset(state, state.flashlightAssetIndex, true);
     state.flashlightInstanceIndex = instanceIndex;
   }
 

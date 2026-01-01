@@ -48,11 +48,14 @@ static bool buildFlashlightModelMatrix(const AppState& state,
   if (instanceIndex < 0 ||
       instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
       state.modelInstances[instanceIndex].assetIndex !=
-          state.flashlightAssetIndex) {
+          state.flashlightAssetIndex ||
+      state.modelInstances[instanceIndex].isEditorPlaced) {
     instanceIndex = -1;
     for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
          --i) {
-      if (state.modelInstances[i].assetIndex == state.flashlightAssetIndex) {
+      const ModelInstance& instance = state.modelInstances[i];
+      if (instance.assetIndex == state.flashlightAssetIndex &&
+          !instance.isEditorPlaced) {
         instanceIndex = i;
         break;
       }
@@ -462,6 +465,11 @@ void renderFrame(AppState& state, GLFWwindow* window) {
         continue;
       }
       if (drewTrees && instance.assetIndex == state.treeAssetIndex) {
+        continue;
+      }
+      if ((!state.flashlightShown || state.editorEnabled) &&
+          instance.assetIndex == state.flashlightAssetIndex &&
+          !instance.isEditorPlaced) {
         continue;
       }
 

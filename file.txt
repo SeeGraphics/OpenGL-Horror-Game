@@ -1,0 +1,545 @@
+OpenGL Horror Game Codebase Deep Dive
+=====================================
+
+This file is a structured refresher of the current codebase layout,
+render flow, math logic, and how systems connect. It is written as
+a map for adding a world editor later.
+
+
+Project Layout (current)
+------------------------
+- src/main.cpp
+  GLFW init, fullscreen window, GL context, AppInit/AppFrame/AppShutdown.
+- src/app.hpp
+  Central AppState struct: all runtime state, settings, resources.
+- src/app.cpp
+  Main update loop, input routing, UI, audio triggers, physics, rendering.
+- src/scene/camera.hpp / src/scene/camera.cpp
+  Camera state, movement, mouse look, view matrix, cooldowns.
+- src/scene/world.hpp / src/scene/world.cpp
+  Terrain generation, heightmap sampling, grass scatter, tree scatter,
+  collision, flashlight attachment, model placement.
+- src/render/renderer.hpp / src/render/renderer.cpp
+  GL setup, buffers, draw pipeline, instancing, render scale FBO.
+- src/render/model.hpp / src/render/model.cpp
+  Assimp model loading, mesh buffers, texture resolution, render settings.
+- src/render/shader.hpp / src/render/shader.cpp
+  Shader program wrapper (compile/link/use).
+- src/ui/debugUi.hpp / src/ui/debugUi.cpp
+  ImGui windows for debug and tuning.
+- src/audio/audio.hpp / src/audio/audio.cpp
+  Miniaudio engine, sound loading, play/loop/stop, master volume.
+- Shader/
+  GLSL programs: default (world/models), grass, skybox.
+- assets/
+  Textures, models (fbx + textures), skybox, heightmap, audio files.
+- third_party/
+  glad, stb_image, imgui, miniaudio sources and headers.
+- nob.cpp
+  Build system entrypoint (build/run).
+
+
+Main Loop and State Flow
+------------------------
+1) main.cpp:
+   - Initializes GLFW and GL context.
+   - Creates fullscreen window.
+   - Logs window vs framebuffer size (points vs pixels).
+   - AppInit() then loop with AppFrame().
+
+2) AppInit (src/app.cpp):
+   - Sets mouse callback.
+   - renderInit() sets up GL, shaders, buffers, textures, render scale FBO.
+   - initWorldModels() loads models and creates instances (trees, props).
+   - initDebugUi() sets up ImGui.
+   - initAudio() loads sounds.
+
+3) AppFrame (src/app.cpp):
+   - Delta time update.
+   - processInput() (movement, flashlight toggle, debug UI toggle).
+   - Debug UI update if enabled.
+   - updateGroundCollision() moves camera and resolves collisions.
+   - updateFlashlightAttachment() positions flashlight model on camera.
+   - Audio: play landing sound, loop walking/running as needed.
+   - renderFrame() draws world to internal render target, then blits.
+   - ImGui render if enabled.
+   - GLFW swap and poll events.
+
+AppState (src/app.hpp) is the hub for everything:
+- World constants: floorSize, cubeScale, renderDistance.
+- Lighting: moonDir, moonColor, ambient/diffuse/specular, fog, flashlight.
+- Terrain: heightmapScale, terrainResolutionScale, terrainDirty.
+- Grass: grassDensity, grassRenderRadius, grassDirty, grassInstances.
+- Trees: treeDensity, treeRenderRadius, treeUpdateDistance, instances.
+- Rendering: shaders, VAOs/VBOs/EBOs, textures, FBO render target.
+- Systems: Camera camera, AudioSystem audio.
+
+This central state is what the map editor will modify.
+
+
+Terrain and Heightmap
+---------------------
+Files:
+- src/scene/world.cpp
+- assets/heightmap_16bit.png
+
+Heightmap load path:
+- loadHeightmap() uses stbi_load_16 to read 16-bit grayscale heightmap.
+- Data stored in heightmapData, width/height tracked globally in world.cpp.
+- sampleHeightNormalized(u, v) does bilinear interpolation between 4 pixels.
+
+World height query:
+getTerrainHeightAt(state, worldX, worldZ):
+- Converts world coordinates to normalized u/v based on the terrain bounds.
+- u = (worldX - start) / span
+- v = (worldZ - start) / span
+- sampleHeightNormalized(u, v) gives 0..1
+- height = baseHeight + sample * heightmapScale
+
+Why this is important:
+- Camera collision uses it to place the player on ground.
+- Grass and trees use it to place instances on the terrain.
+- Editor placement can use it to "drop" objects onto the ground.
+
+Terrain mesh generation:
+buildFloor(state):
+- gridSize = (floorSize * 2) / terrainResolutionScale
+  (larger resolutionScale -> fewer vertices)
+- world size stays constant, tileSize = worldSize / gridSize
+- Generates (gridSize + 1)^2 vertices.
+- Each vertex stores: position (x,y,z), normal (x,y,z), uv (u,v).
+- Normals are computed by height differences (central difference).
+- Indices are built for two triangles per quad.
+
+Buffers:
+renderInit() creates VAO/VBO/EBO for terrain and uploads the data.
+uploadTerrainBuffers() updates GL buffers after buildFloor.
+
+
+Grass
+-----
+Files:
+- src/scene/world.cpp (buildGrass)
+- src/render/renderer.cpp (grass buffer + draw)
+- Shader/grass.vs + Shader/grass.fs
+
+Generation:
+- buildGrass() uses a grid aligned with terrain.
+- Uses grassRenderRadius to only spawn in a circle around camera.
+- Uses hashToUnitFloat() for deterministic randomness.
+- Each tile spawns N instances based on grassDensity.
+- Each instance stores a world position (x,y,z).
+
+Rendering:
+- A single "X" quad mesh is stored in grassVAO.
+- Instances are rendered with glDrawElementsInstanced.
+- grass.vs adds instance position to quad vertices.
+- grass.fs does alpha cutout and simple lighting.
+
+
+Trees and Models
+---------------
+Files:
+- src/render/model.cpp / model.hpp
+- src/scene/world.cpp (scatterTrees, initWorldModels)
+- src/render/renderer.cpp (instancing draw)
+
+Model templates:
+- gModelTemplates in src/render/model.cpp is the "catalog".
+- Each entry has an id, a path to the fbx, and render settings.
+- initWorldModels() loads all templates into modelAssets.
+
+FBX to GPU buffer path:
+1) Model::Load(path, settings):
+   - Uses Assimp with flags:
+     aiProcess_Triangulate
+     aiProcess_CalcTangentSpace
+     aiProcess_GenSmoothNormals
+     aiProcess_PreTransformVertices
+     (optional aiProcess_FlipUVs)
+2) For each aiMesh:
+   - Extract position, normal, UVs, tangent.
+   - Build a vertex array of 11 floats per vertex:
+     pos(3), normal(3), uv(2), tangent(3)
+3) Build indices from faces.
+4) Resolve textures:
+   - Load material diffuse or base color.
+   - Try to load normal map.
+   - Fallback to textures folder or default white/normal.
+5) Create VAO/VBO/EBO and upload vertex + index data.
+
+By the time Model::Load returns, each mesh has:
+- VAO/VBO/EBO (GPU resident)
+- texture id
+- normalMap id
+- indexCount
+
+Model assets and instances:
+- ModelAsset: a loaded Model + render settings.
+- ModelInstance: position/rotation/scale + asset index.
+- AppState has modelAssets and modelInstances.
+
+Instancing for trees:
+- uploadTreeInstances() gathers visible tree instances within radius.
+- Builds a mat4 per instance and uploads into treeInstanceVBO.
+- default.vs reads instance matrix in attributes 4..7 when useInstancing is true.
+- glDrawElementsInstanced draws all trees in a few calls.
+
+Collision with trees:
+- treeCollisionPositions is filled from the same visible tree list.
+- resolveTreeCollisions() pushes player out using simple radius checks.
+
+
+Flashlight Attachment and Aim
+-----------------------------
+Files:
+- src/scene/camera.cpp (cameraFront)
+- src/scene/world.cpp (updateFlashlightAttachment)
+- src/render/renderer.cpp (spotlight uniforms)
+
+Camera direction:
+- cameraFront is a unit vector from yaw/pitch:
+  direction.x = cos(yaw) * cos(pitch)
+  direction.y = sin(pitch)
+  direction.z = sin(yaw) * cos(pitch)
+  cameraFront = normalize(direction)
+
+Camera basis:
+- forward = normalize(cameraFront)
+- right = normalize(cross(forward, cameraUp))
+- up = normalize(cross(right, forward))
+
+Attachment:
+- updateFlashlightAttachment() positions flashlight model:
+  position = cameraPos
+           + forward * flashlightOffsetForward
+           + right   * flashlightOffsetRight
+           + up      * flashlightOffsetDown
+
+Spotlight direction:
+- If flashlight model exists:
+  - buildFlashlightModelMatrix() builds a model matrix from basis.
+  - flashlightDir = normalize(mat3(model) * flashlightBeamForward)
+- Otherwise:
+  - flashlightDir = normalize(cameraFront)
+
+This pattern is reusable for weapons:
+- Use camera basis, apply local offsets, transform forward vectors.
+
+
+Render Pipeline (including low-res renderScale)
+-----------------------------------------------
+Files:
+- src/render/renderer.cpp
+
+renderInit():
+- GL state: depth test, blending, culling on.
+- Load shaders.
+- Build terrain buffers, grass buffers, skybox.
+- Create render target FBO via ensureRenderTarget().
+
+renderFrame():
+- Rebuild terrain if dirty (heightmap scale changed).
+- Rebuild grass or trees if dirty or moved far enough.
+- ensureRenderTarget() to match framebuffer * renderScale.
+- Bind FBO, set viewport to target size.
+- Compute view and projection matrix for target size.
+- Draw terrain, models, grass, skybox into FBO.
+- Blit FBO to the default framebuffer (GL_NEAREST).
+- Reset viewport for ImGui.
+
+Why this matters:
+- renderScale < 1.0 lowers pixel cost while keeping world size intact.
+- Internal render target uses GL_RGBA8 + DEPTH24_STENCIL8.
+- Blit with GL_NEAREST gives a PS1-like sharp upscale.
+
+RenderScale and FBO Details (deep dive)
+--------------------------------------
+Render scale is implemented as an offscreen framebuffer (FBO) that is smaller
+than the default framebuffer. The scene is rendered into the small target, then
+upscaled to the window.
+
+The key function is ensureRenderTarget() in src/render/renderer.cpp:
+- It reads the actual framebuffer size from GLFW (framebufferWidth/Height).
+- It multiplies that by AppState.renderScale to get targetWidth/Height.
+- It clamps the size to at least 1x1.
+- If the size changed, it deletes and rebuilds the FBO attachments.
+
+Attachments created:
+- Color: GL_TEXTURE_2D, GL_RGBA8, size targetWidth x targetHeight.
+- Depth+stencil: GL_RENDERBUFFER, GL_DEPTH24_STENCIL8.
+
+Render order in renderFrame():
+1) Bind FBO: glBindFramebuffer(GL_FRAMEBUFFER, renderTargetFbo)
+2) Set viewport to target size: glViewport(0, 0, renderTargetWidth, renderTargetHeight)
+3) Clear color+depth.
+4) Render scene (terrain, models, grass, skybox) as usual.
+5) Blit: glBindFramebuffer(GL_READ_FRAMEBUFFER, renderTargetFbo)
+           glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+           glBlitFramebuffer(..., GL_COLOR_BUFFER_BIT, GL_NEAREST)
+6) Reset viewport to full framebuffer size for ImGui overlays.
+
+Important: projection uses renderTargetWidth/Height so aspect ratio matches the
+FBO. If you render at 0.5 scale, you still get the same field of view and
+geometry, just fewer pixels and a sharper upscale.
+
+Why this impacts editor picking:
+- Mouse positions are in window coordinates (points), not render target pixels.
+- The projection matrix uses only aspect ratio, so the main mismatch comes from
+  cursor units. If you use framebuffer size for unproject, you must scale
+  cursor positions by framebuffer/window ratio.
+  Example: mousePx = mouseWindow * (framebufferWidth / windowWidth).
+
+Common pitfalls:
+- Forgetting to reset viewport after blitting can break ImGui or overlays.
+- Rebuilding the FBO every frame will tank performance. This code only rebuilds
+  on size change or renderScale change.
+- If the FBO is incomplete, rendering will fail. The code prints "Render target incomplete".
+
+
+Shader Math Deep Dive
+---------------------
+This section is purely shader math and how your GLSL is structured.
+
+1) Vertex Transform (Shader/default.vs)
+   - Inputs:
+     aPos, aNormal, aTexCoord, aTangent
+   - Transform:
+     worldPos = modelMatrix * vec4(aPos, 1)
+     gl_Position = projection * view * worldPos
+   - Normals:
+     normalMatrix = transpose(inverse(mat3(modelMatrix)))
+     Normal = normalize(normalMatrix * aNormal)
+     Tangent = normalize(normalMatrix * aTangent)
+
+Why the normal matrix:
+- If a model is scaled non-uniformly, normals are no longer orthogonal.
+- inverse-transpose corrects the normal direction so lighting stays correct.
+
+2) Instancing (Shader/default.vs)
+   - If useInstancing is true, the model matrix comes from instance rows
+     (attributes 4..7).
+   - This lets one draw call place many meshes in different locations.
+
+3) Tangent Space Normal Mapping (Shader/default.fs)
+   - Tangent, normal, bitangent form a TBN matrix.
+   - Normal map gives a vector in tangent space (0..1 -> -1..1).
+   - TBN transforms it into world space.
+   - This is how surface detail appears without extra geometry.
+
+TBN in your shader:
+  tangent = normalize(Tangent)
+  tangent = normalize(tangent - dot(tangent, norm) * norm)
+  bitangent = cross(norm, tangent)
+  tbn = mat3(tangent, bitangent, norm)
+  normalSample = texture(normalMap, TexCoord).rgb * 2 - 1
+  normalSample.xy *= normalStrength
+  norm = normalize(tbn * normalSample)
+
+4) Lighting (Phong-ish)
+   - Ambient: ambientStrength * lightColor
+   - Diffuse: diffuseStrength * max(dot(norm, lightDir), 0)
+   - Specular: specularStrength * pow(max(dot(viewDir, reflectDir),0), shininess)
+   - Final: (ambient + diffuse + spotlight) * albedo + specular
+
+Key vectors:
+  lightDirNorm = normalize(-lightDir)
+  viewDir = normalize(viewPos - FragPos)
+  reflectDir = reflect(-lightDirNorm, norm)
+
+5) Spotlight (flashlight)
+   - theta = dot(toFrag, spotDir)
+   - smooth cutoff:
+       spotFactor = clamp((theta - outer) / (inner - outer), 0, 1)
+   - Adds spotDiffuse + spotSpecular, multiplied by spotIntensity.
+
+6) Fog (exponential)
+   - distance = length(viewPos - FragPos)
+   - fogFactor = exp(-fogDensity * distance)
+   - finalColor = mix(fogColor, litColor, fogFactor)
+
+7) Alpha Cutout (trees and grass)
+   - texColor.a < alphaCutoff => discard
+   - This is required for leaf cards and grass cards.
+   - Side effect: disables early-Z on those pixels, so overdraw is heavier.
+
+8) Double-Sided Normals
+   - If doubleSided is true, flip the normal when back-facing:
+     if (!gl_FrontFacing) norm = -norm
+   - Use this for leaf cards if back faces look dark.
+
+9) Grass Shader (Shader/grass.fs)
+   - Normal is forced to (0,1,0).
+   - Simpler lighting and no specular.
+   - Spotlight and fog match the world shader.
+
+
+Camera Math and Movement
+------------------------
+Files:
+- src/scene/camera.cpp
+
+Mouse input:
+- yaw and pitch are updated from mouse deltas.
+- pitch is clamped to avoid gimbal flip.
+- cameraFront is computed from yaw/pitch.
+- flatFront is cameraFront projected onto XZ (Y=0) so forward
+  movement still works when looking straight down.
+
+Movement:
+- WASD builds wishDir from flatFront and cross(flatFront, up).
+- Sprint requires mostly forward movement (dot > 0.5).
+- velocity is applied in updateGroundCollision().
+
+View matrix:
+- GetViewMatrix() returns lookAt(cameraPos + bobOffset, cameraPos + bobOffset + cameraFront, cameraUp)
+
+
+Editor Integration Notes
+------------------------
+The world editor should target:
+- AppState.modelInstances (what is placed)
+- AppState.modelAssets (what can be placed)
+- AppState terrain/grass/tree settings
+
+Recommended flow:
+1) Editor mode toggle in AppState.
+2) Input routing: editorModeInput vs processInput.
+3) Raycast to select:
+   - Terrain: use getTerrainHeightAt for drop position.
+   - Models: use Model::GetBoundingRadius with instance scale.
+4) Transform editing:
+   - Update ModelInstance position/rotation/scale.
+5) Save/Load:
+   - Serialize modelInstances to a JSON or text file under assets/scenes.
+
+Editor picking math (deep dive)
+-------------------------------
+Picking is "turn mouse into a ray, then test intersections".
+
+Coordinate spaces involved:
+- Window space: mouseX, mouseY from ImGui or GLFW.
+- Normalized device coords (NDC): range -1..1 in X and Y.
+- View space: camera space.
+- World space: your actual scene coordinates.
+
+Step 1: Convert mouse to NDC.
+If mouse is in window coordinates (0..windowWidth, 0..windowHeight):
+  xNdc = (2.0 * mouseX / windowWidth) - 1.0
+  yNdc = 1.0 - (2.0 * mouseY / windowHeight)
+
+Note about retina and renderScale:
+- If you use glfwGetCursorPos (window coordinates), you should use window size.
+- If you use framebuffer size, multiply mouse by content scale:
+  scaleX = framebufferWidth / windowWidth
+  scaleY = framebufferHeight / windowHeight
+  mousePxX = mouseX * scaleX
+  mousePxY = mouseY * scaleY
+
+Step 2: Unproject to world.
+Use inverse(projection * view):
+  vec4 nearClip = vec4(xNdc, yNdc, -1.0, 1.0)
+  vec4 farClip  = vec4(xNdc, yNdc,  1.0, 1.0)
+  vec4 nearWorld = invViewProj * nearClip
+  vec4 farWorld  = invViewProj * farClip
+  nearWorld /= nearWorld.w
+  farWorld  /= farWorld.w
+
+Ray:
+  origin = nearWorld.xyz (or cameraPos)
+  dir = normalize(farWorld.xyz - nearWorld.xyz)
+
+Step 3: Intersections.
+- Ray vs sphere (fast, good for model bounds):
+  oc = origin - center
+  b = dot(oc, dir)
+  c = dot(oc, oc) - r*r
+  h = b*b - c
+  if h < 0 -> no hit
+  t = -b - sqrt(h) (closest hit)
+- Ray vs AABB (slab method):
+  For each axis: t1 = (min - origin) / dir, t2 = (max - origin) / dir
+  tMin = max(min(t1,t2) for all axes)
+  tMax = min(max(t1,t2) for all axes)
+  if tMax < 0 or tMin > tMax -> no hit
+- Ray vs terrain (heightmap):
+  You have height = getTerrainHeightAt(x,z). Solve for y(t) = height(x(t), z(t)).
+  Practical approach:
+    1) Step along ray in small increments until it crosses the terrain.
+    2) Binary search between last above and first below to refine the hit.
+
+Example terrain hit loop:
+  t = 0; step = 0.5
+  for i in 0..maxSteps:
+    p = origin + dir * t
+    if p.y <= getTerrainHeightAt(p.x, p.z): break (hit)
+    t += step
+  then binary search between t-step and t for precision.
+
+Editor state and selection:
+- Store selected instance index in AppState.
+- Use ray hits to set selection.
+- When in editor mode, move/rotate/scale changes apply to that instance.
+
+Scene serialization (deep dive)
+-------------------------------
+Do not write to a header. Use a data file. Two lightweight options:
+
+Option A: Simple text format (no external libs).
+File: assets/scenes/world.txt
+Example:
+  version 1
+  setting fogDensity 0.02
+  setting grassDensity 0.05
+  setting treeDensity 0.02
+  setting heightmapScale 40
+  instance Tree pos 12.0 3.5 -8.0 rot 0 90 0 scale 0.003 0.003 0.003
+  instance Church pos 5.0 10.0 2.0 rot 0 0 0 scale 0.1 0.1 0.1
+
+Parsing idea:
+- Read tokens with ifstream.
+- "setting" updates AppState fields.
+- "instance" stores id and transforms.
+- Ignore blank lines and lines starting with '#'.
+
+Option B: JSON (cleaner but needs a parser).
+File: assets/scenes/world.json
+Example:
+{
+  "version": 1,
+  "settings": {
+    "fogDensity": 0.02,
+    "grassDensity": 0.05,
+    "treeDensity": 0.02,
+    "heightmapScale": 40.0
+  },
+  "instances": [
+    { "id": "Tree", "pos": [12,3.5,-8], "rot": [0,90,0], "scale": [0.003,0.003,0.003] },
+    { "id": "Church", "pos": [5,10,2], "rot": [0,0,0], "scale": [0.1,0.1,0.1] }
+  ]
+}
+
+Mapping IDs to assets:
+- The string id should match ModelTemplate.id (src/render/model.cpp).
+- At load time, build a map from id -> assetIndex.
+- For each instance entry, create ModelInstance with assetIndex.
+
+When to load:
+- After initWorldModels() loads assets, call loadScene().
+- If you still want procedural trees, you can gate it:
+  - If scene file has "Tree" instances, skip scatterTrees().
+  - Otherwise, use scatterTrees() as a fallback.
+
+When to save:
+- On editor save hotkey (Ctrl+S or a UI button).
+- Write settings + all modelInstances except ones you want procedural.
+
+
+Quick Reference: "Where is X?"
+------------------------------
+- "How do I draw models?" -> src/render/renderer.cpp, Model::Load in src/render/model.cpp
+- "Where do trees get placed?" -> scatterTrees in src/scene/world.cpp
+- "How do I get terrain height?" -> getTerrainHeightAt in src/scene/world.cpp
+- "How is camera forward computed?" -> ProcessMouseMovement in src/scene/camera.cpp
+- "How do I adjust flashlight beam?" -> flashlightBeamOffset and flashlightBeamForward in src/app.hpp
+- "How does renderScale work?" -> ensureRenderTarget in src/render/renderer.cpp

@@ -5,8 +5,10 @@ struct GLFWwindow;
 struct AppState;
 
 bool initDebugUi(GLFWwindow* window);
-void beginDebugUiFrame();
+void beginUiFrame();
+void beginMapEditorUiFrame();
 void drawDebugUi(AppState& state);
+void drawMapEditorUi(AppState& state);
 void endDebugUiFrame();
 void shutdownDebugUi();
 

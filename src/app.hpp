@@ -44,7 +44,6 @@ struct AppState {
   float flashlightOffsetForward = 0.45f;
   float flashlightOffsetRight = 0.18f;
   float flashlightOffsetDown = -0.12f;
-  float flashlightScale = 0.007f;
   glm::vec3 flashlightBeamOffset = glm::vec3(0.0f);
   glm::vec3 flashlightBeamForward = glm::vec3(0.0f, 0.0f, -1.0f);
 
@@ -68,11 +67,19 @@ struct AppState {
   glm::vec2 treeCullCenter = glm::vec2(0.0f);
   float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
 
+  // MAPEDITOR
+  bool editorEnabled = false;
+  int selectedInstance = -1;
+  int gizmoOperation = -1;
+  // reuse "q" mouse toggle
+  // force freecam true
+  bool editorWantsMouse = false;
+
   // OTHER
   bool fullscreen = true;
   bool wireframe = false;
   bool freeCam = false;
-  bool showDebugUi = true;
+  bool showDebugUi = false;
 
   // SYSTEMS / DATA
   Camera camera;
@@ -91,6 +98,19 @@ struct AppState {
   int walterInstanceIndex = -1;
   int flashlightAssetIndex = -1;
   int flashlightInstanceIndex = -1;
+  int churchAssetIndex = -1;
+  int churchInstanceIndex = -1;
+  int deadtreeAssetIndex = -1;
+  int deadtreeInstanceIndex = -1;
+
+  // MODEL SCALES
+  float walterScale = 0.001f;
+  float treeScale =
+      0.001f;  // seperate from base Scale (e.g this doesnt affect environment
+               // trees, only ones placed with through the UI)
+  float churchScale = 0.1f;
+  float deadtreeScale = 0.01f;
+  float flashlightScale = 0.007f;
 
   // OPENGL
   unsigned int VBO = 0;

@@ -5,6 +5,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "app.hpp"
+
 void Cooldown::Update(float deltaTime) {
   if (timer > 0.0f) {
     timer -= deltaTime;
@@ -63,8 +65,8 @@ void Camera::AttachToWindow(GLFWwindow* window, float screenX, float screenY) {
   glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
-                             bool freeCam) {
+void Camera::ProcessKeyboard(AppState& state, GLFWwindow* window,
+                             float deltaTime, bool freeCam) {
   // update cooldowns
   flashlightToggleCooldown.Update(deltaTime);
   jumpCooldown.Update(deltaTime);
@@ -146,7 +148,7 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   // Jump
   if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
     if (freeCam) {
-      cameraPos += velocityValue * cameraUp;
+      cameraPos += velocityValue * cameraUp * 40.0f;
     } else {
       if (isGrounded) {
         if (jumpCooldown.TryUse()) {
@@ -160,8 +162,8 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   // Sneak
   // Sneak Toggle
   if (glfwGetKey(window, GLFW_KEY_C) == GLFW_PRESS) {
-    if (freeCam) {
-      cameraPos -= velocityValue * cameraUp;
+    if (freeCam || state.editorEnabled) {
+      cameraPos -= velocityValue * cameraUp * 40.0f;  // sneak super fast
     } else {
       if (!cWasDown) {
         isSneaking = !isSneaking;  // Just flip the state
@@ -178,10 +180,10 @@ void Camera::ProcessKeyboard(GLFWwindow* window, float deltaTime,
   cameraHeight = glm::mix(cameraHeight, targetHeight, sneakSpeed * deltaTime);
 
   // Apply Movement Logic
-  if (freeCam) {
+  if (freeCam || state.editorEnabled) {
     // Fly mode: Instant response
     if (glm::length(wishDir) > 0.0f) {
-      currentSpeed = 20.0f;
+      currentSpeed = 120.0f;
       cameraPos += glm::normalize(wishDir) * currentSpeed * deltaTime;
     }
     velocity = glm::vec3(0.0f);  // Kill momentum when switching to freeCam

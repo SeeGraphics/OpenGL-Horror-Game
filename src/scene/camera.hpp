@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 
+struct AppState;
 struct GLFWwindow;
 
 struct Cooldown {
@@ -52,7 +53,8 @@ class Camera {
   bool isSprinting;
 
   void AttachToWindow(GLFWwindow* window, float screenX, float screenY);
-  void ProcessKeyboard(GLFWwindow* window, float deltaTime, bool freeCam);
+  void ProcessKeyboard(AppState& state, GLFWwindow* window, float deltaTime,
+                       bool freeCam);
   void ProcessMouse(double xpos, double ypos);
   glm::mat4 GetViewMatrix();
 

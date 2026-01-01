@@ -94,7 +94,7 @@ bool renderInit(AppState& state, GLFWwindow* window) {
     return false;
   }
 
-  // culling
+  // for some reason enabling this breaks the visuals entirely
   // glEnable(GL_CULL_FACE);
   // glCullFace(GL_BACK);
   // glFrontFace(GL_CCW);
@@ -357,10 +357,9 @@ void renderFrame(AppState& state, GLFWwindow* window) {
     if (glm::length(localForward) < 0.001f) {
       localForward = glm::vec3(0.0f, 0.0f, -1.0f);
     }
-    flashlightPos = glm::vec3(
-        flashlightModel * glm::vec4(state.flashlightBeamOffset, 1.0f));
-    flashlightDir =
-        glm::normalize(glm::mat3(flashlightModel) * localForward);
+    flashlightPos = glm::vec3(flashlightModel *
+                              glm::vec4(state.flashlightBeamOffset, 1.0f));
+    flashlightDir = glm::normalize(glm::mat3(flashlightModel) * localForward);
   }
   float flashlightInnerCutoff =
       glm::cos(glm::radians(state.flashlightRadius * 0.85f));
@@ -437,8 +436,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
         glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"),
                     settings.useNormalMap ? 1 : 0);
         glm::mat4 identity = glm::mat4(1.0f);
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE,
-                           glm::value_ptr(identity));
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(identity));
         for (const ModelMesh& mesh : asset.model.GetMeshes()) {
           glActiveTexture(GL_TEXTURE0);
           glBindTexture(GL_TEXTURE_2D, mesh.texture);
@@ -448,21 +446,19 @@ void renderFrame(AppState& state, GLFWwindow* window) {
           }
           glBindVertexArray(mesh.vao);
           glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
-                                  GL_UNSIGNED_INT, 0,
-                                  state.treeInstanceCount);
+                                  GL_UNSIGNED_INT, 0, state.treeInstanceCount);
         }
         drewTrees = true;
       }
     }
 
-    glUniform1i(
-        glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useInstancing"),
+                0);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"), 0);
 
     for (const ModelInstance& instance : state.modelInstances) {
       if (instance.assetIndex < 0 ||
-          instance.assetIndex >=
-              static_cast<int>(state.modelAssets.size())) {
+          instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
         continue;
       }
       if (drewTrees && instance.assetIndex == state.treeAssetIndex) {
@@ -487,15 +483,12 @@ void renderFrame(AppState& state, GLFWwindow* window) {
         basis[2] = glm::vec4(-forward, 0.0f);
         modelMatrix *= basis;
       }
-      modelMatrix =
-          glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
-                      glm::vec3(0.0f, 1.0f, 0.0f));
-      modelMatrix =
-          glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
-                      glm::vec3(1.0f, 0.0f, 0.0f));
-      modelMatrix =
-          glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
-                      glm::vec3(0.0f, 0.0f, 1.0f));
+      modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
+                                glm::vec3(0.0f, 1.0f, 0.0f));
+      modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.x),
+                                glm::vec3(1.0f, 0.0f, 0.0f));
+      modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.z),
+                                glm::vec3(0.0f, 0.0f, 1.0f));
       modelMatrix = glm::scale(modelMatrix, instance.scale);
 
       const ModelRenderSettings& settings = asset.renderSettings;
@@ -530,15 +523,14 @@ void renderFrame(AppState& state, GLFWwindow* window) {
 
     glUniform1f(glGetUniformLocation(state.worldShader->ID, "alphaCutoff"),
                 0.0f);
-    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"),
-                0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useNormalMap"), 0);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalMap"), 0);
     glUniform1f(glGetUniformLocation(state.worldShader->ID, "normalStrength"),
                 1.0f);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "normalDebug"), 0);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "doubleSided"), 0);
-    glUniform1i(
-        glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useInstancing"),
+                0);
     glUniform1f(glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
                 1.0f);
   }
@@ -610,8 +602,8 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glBindFramebuffer(GL_READ_FRAMEBUFFER, state.renderTargetFbo);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
   glBlitFramebuffer(0, 0, state.renderTargetWidth, state.renderTargetHeight, 0,
-                    0, framebufferWidth, framebufferHeight,
-                    GL_COLOR_BUFFER_BIT, GL_NEAREST);
+                    0, framebufferWidth, framebufferHeight, GL_COLOR_BUFFER_BIT,
+                    GL_NEAREST);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   glViewport(0, 0, framebufferWidth, framebufferHeight);
 }
@@ -808,8 +800,7 @@ static void ensureRenderTarget(AppState& state, int framebufferWidth,
   if (targetHeight < 1) {
     targetHeight = 1;
   }
-  if (state.renderTargetFbo != 0 &&
-      targetWidth == state.renderTargetWidth &&
+  if (state.renderTargetFbo != 0 && targetWidth == state.renderTargetWidth &&
       targetHeight == state.renderTargetHeight) {
     return;
   }

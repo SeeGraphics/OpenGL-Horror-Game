@@ -56,9 +56,15 @@ void AppFrame(AppState& state, GLFWwindow* window) {
     state.camera.flashlightToggled = false;
   }
 
-  if (state.showDebugUi) {
-    beginDebugUiFrame();
-    drawDebugUi(state);
+  bool hasUi = state.showDebugUi || state.editorEnabled;
+  if (hasUi) {
+    beginUiFrame();
+    if (state.showDebugUi) {
+      drawDebugUi(state);
+    }
+    if (state.editorEnabled) {
+      drawMapEditorUi(state);
+    }
   }
 
   updateGroundCollision(state);
@@ -86,7 +92,7 @@ void AppFrame(AppState& state, GLFWwindow* window) {
   renderFrame(state, window);
 
   // render imgui
-  if (state.showDebugUi) {
+  if (hasUi) {
     endDebugUiFrame();
   }
 
@@ -108,6 +114,29 @@ static void processInput(GLFWwindow* window) {
 
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
+
+  // toggle editor
+  static bool eWasDown = false;
+  if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+    if (!eWasDown) {
+      state.editorEnabled = !state.editorEnabled;
+      state.freeCam = !state.freeCam;
+      state.renderDistance = 2000.0f;  // make sure we see whole map
+      state.ambientStrength = 2.5f;
+      state.skyboxIntensity = 1.0f;
+      state.fogDensity = 0.0f;
+    }
+    eWasDown = true;
+  } else {
+    eWasDown = false;
+    // revert to default values
+    if (!state.editorEnabled) {
+      state.renderDistance = 1000.0f;
+      state.ambientStrength = 1.55f;
+      state.skyboxIntensity = 0.55f;
+      state.fogDensity = 0.02f;
+    }
+  }
 
   // toggle freeCam
   static bool vWasDown = false;
@@ -136,7 +165,7 @@ static void processInput(GLFWwindow* window) {
   }
 
   // player/ camera controls from camera.cpp
-  state.camera.ProcessKeyboard(window, state.deltaTime, state.freeCam);
+  state.camera.ProcessKeyboard(state, window, state.deltaTime, state.freeCam);
   static bool pWasDown = false;
 
   // toggle Wireframe mode

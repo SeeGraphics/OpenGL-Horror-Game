@@ -6,6 +6,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "scene/world.hpp"
 
 bool initDebugUi(GLFWwindow* window) {
   IMGUI_CHECKVERSION();
@@ -16,7 +17,7 @@ bool initDebugUi(GLFWwindow* window) {
   return true;
 }
 
-void beginDebugUiFrame() {
+void beginUiFrame() {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
@@ -56,10 +57,10 @@ void drawDebugUi(AppState& state) {
                      -2.0f, 2.0f);
   ImGui::SliderFloat("Flashlight Offset Down", &state.flashlightOffsetDown,
                      -2.0f, 2.0f);
-  ImGui::SliderFloat3("Flashlight Beam Offset",
-                      &state.flashlightBeamOffset.x, -2.0f, 2.0f);
-  ImGui::SliderFloat3("Flashlight Beam Forward",
-                      &state.flashlightBeamForward.x, -1.0f, 1.0f);
+  ImGui::SliderFloat3("Flashlight Beam Offset", &state.flashlightBeamOffset.x,
+                      -2.0f, 2.0f);
+  ImGui::SliderFloat3("Flashlight Beam Forward", &state.flashlightBeamForward.x,
+                      -1.0f, 1.0f);
   ImGui::SliderFloat("Fog", &state.fogDensity, 0.0f, 0.50f);
   if (ImGui::SliderFloat("Heightmap Scale", &state.heightmapScale, 0.0f,
                          50.0f)) {
@@ -144,6 +145,35 @@ void drawDebugUi(AppState& state) {
                          1.0f)) {
     setMasterVolume(state.audio, state.audio.masterVolume);
   }
+  ImGui::End();
+}
+
+void drawMapEditorUi(AppState& state) {
+  // menu to add models
+  ImGui::Begin("Models");
+  if (ImGui::Button("Tree")) {
+    addModelInstance(state, state.treeAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
+                     glm::vec3(0.0f), glm::vec3(state.treeScale));
+  }
+  if (ImGui::Button("Walter")) {
+    addModelInstance(state, state.walterAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
+                     glm::vec3(0.0f), glm::vec3(state.walterScale));
+  }
+  if (ImGui::Button("Church")) {
+    addModelInstance(state, state.churchAssetIndex, glm::vec3(0.0f, 0.0f, 0.0f),
+                     glm::vec3(0.0f), glm::vec3(state.churchScale));
+  }
+  if (ImGui::Button("Flashlight")) {
+    addModelInstance(state, state.flashlightAssetIndex,
+                     glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f),
+                     glm::vec3(state.flashlightScale));
+  }
+  if (ImGui::Button("Dead Tree")) {
+    addModelInstance(state, state.deadtreeAssetIndex,
+                     glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f),
+                     glm::vec3(state.deadtreeScale));
+  }
+
   ImGui::End();
 }
 

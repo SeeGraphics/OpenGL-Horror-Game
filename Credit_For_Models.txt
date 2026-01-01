@@ -7,3 +7,11 @@ WHITE VAN: https://sketchfab.com/3d-models/white-van-ps1-low-poly-1cac40905d494b
 DEAD TREE (NOT YET IN GAME): https://sketchfab.com/3d-models/dead-tree-ps1-low-poly-de2611ba107f4c3c8c89bf516d5d9b6b
 FLASHLIGHT: https://sketchfab.com/3d-models/flashlight-4776f56179af4891ac856316892c4cd8
 METAL BARREL: https://sketchfab.com/3d-models/ps1-style-metal-barrel-2e5ead524a4b49b9a17e33a123aeec46
+
+MODELS NOT YET USED:
+
+CAMERA: https://sketchfab.com/3d-models/hand-camera-psxps1-b8c55755dd25418b91ab1b64179c803b
+WOOD LOG PILE: https://sketchfab.com/3d-models/wood-log-pile-ps1-low-poly-297af51362454833b93d70afb059d56a
+SKULL: https://sketchfab.com/3d-models/skull-ps1-style-a6bc113ce95a4c3eb221babbf25fb3df
+HODDED MONSTER: https://sketchfab.com/3d-models/ps1-rigged-character-model-c2bebab812d74d6393168e5045ecd2e9
+

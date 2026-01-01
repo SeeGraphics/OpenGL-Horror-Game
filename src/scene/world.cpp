@@ -49,9 +49,8 @@ static int addModelAsset(AppState& state, const char* id, const char* path,
   return static_cast<int>(state.modelAssets.size()) - 1;
 }
 
-static int addModelInstance(AppState& state, int assetIndex,
-                            const glm::vec3& position,
-                            const glm::vec3& rotation, const glm::vec3& scale) {
+int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
+                     const glm::vec3& rotation, const glm::vec3& scale) {
   if (assetIndex < 0 ||
       assetIndex >= static_cast<int>(state.modelAssets.size())) {
     return -1;
@@ -517,13 +516,18 @@ void initWorldModels(AppState& state) {
   // Both declared in src/app.hpp
   // ONLY needed if it needs to communicate with something else, e.g scale
   // slider in imgui ui or respawn / culling, changing pos stuff like that.
-  // IF its just placed in the world then you dont need to add these vars.
+  // IF its just placed in the world for testing then you dont need to add these
+  // vars.
   state.treeAssetIndex = -1;
   state.treeInstanceIndex = -1;
   state.walterAssetIndex = -1;
   state.walterInstanceIndex = -1;
   state.flashlightAssetIndex = -1;
   state.flashlightInstanceIndex = -1;
+  state.churchAssetIndex = -1;
+  state.churchInstanceIndex = -1;
+  state.deadtreeAssetIndex = -1;
+  state.deadtreeInstanceIndex = -1;
 
   int templateCount = 0;
   const ModelTemplate* templates = GetModelTemplates(&templateCount);
@@ -559,6 +563,8 @@ void initWorldModels(AppState& state) {
   state.treeAssetIndex = treeAsset;
   state.walterAssetIndex = walterAsset;
   state.flashlightAssetIndex = flashlightAsset;
+  state.churchAssetIndex = churchAsset;
+  state.deadtreeAssetIndex = deadtreeAsset;
   scatterTrees(state, treeAsset);
 
   // PLACE MODELS IN WORLD
@@ -566,17 +572,16 @@ void initWorldModels(AppState& state) {
 
   // add test walter
   if (walterAsset >= 0) {
-    float walterScale = 0.001f;
     state.walterInstanceIndex =
         addModelInstance(state, walterAsset, glm::vec3(8.0f, 38.0f, -14.0f),
-                         glm::vec3(0.0f), glm::vec3(walterScale));
+                         glm::vec3(0.0f), glm::vec3(state.walterScale));
   }
 
   // add test church
   if (churchAsset >= 0) {
-    float churchScale = 0.1f;
-    addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
-                     glm::vec3(0.0f), glm::vec3(churchScale));
+    state.churchInstanceIndex =
+        addModelInstance(state, churchAsset, glm::vec3(15.0f, 45.0f, -14.0f),
+                         glm::vec3(0.0f), glm::vec3(state.churchScale));
   }
 
   // add flashlight
@@ -586,10 +591,11 @@ void initWorldModels(AppState& state) {
                          glm::vec3(0.0f), glm::vec3(state.flashlightScale));
   }
 
-  // add dead_tree
+  // add dead_tree 0.01f is the scale
   if (deadtreeAsset >= 0) {
-    addModelInstance(state, deadtreeAsset, glm::vec3(20.0f, 50.0f, -16.0f),
-                     glm::vec3(0.0f), glm::vec3(0.01));
+    state.deadtreeInstanceIndex =
+        addModelInstance(state, deadtreeAsset, glm::vec3(20.0f, 50.0f, -16.0f),
+                         glm::vec3(0.0f), glm::vec3(state.deadtreeScale));
   }
 }
 

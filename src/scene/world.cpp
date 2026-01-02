@@ -91,7 +91,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
   float density = state.treeDensity;
   if (density < 0.0f) density = 0.0f;
   if (density > 8.0f) density = 8.0f;
-  const float baseScale = 0.003f;
+  const float baseScale = 0.004f;
   const float scaleJitter = 0.35f;  // different tree sizes
   const float jitterScale = 1.0f;  // keep offsets inside each cell
 

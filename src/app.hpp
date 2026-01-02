@@ -60,7 +60,7 @@ struct AppState {
   float grassRenderRadius = 25.0f;
   bool grassDirty = true;
   glm::vec2 grassCenter = glm::vec2(0.0f);
-  float treeDensity = 8.0f;
+  float treeDensity = 6.5f;
   bool treeDirty = false;
   bool treeInstanceDirty = false;
   float treeRenderRadius = 28.0f;

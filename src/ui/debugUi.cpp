@@ -194,7 +194,7 @@ void drawMapEditorUi(AppState& state) {
   // Remove the most recent editor-placed instance.
   // Note: editor trees are still rendered through the instanced tree buffer,
   // so we flag treeInstanceDirty to rebuild that buffer immediately.
-  if (ImGui::Button("Delete Last Editor Model")) {
+  if (ImGui::Button("Delete Last")) {
     bool removedTree = false;
     for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
          --i) {
@@ -212,7 +212,7 @@ void drawMapEditorUi(AppState& state) {
     }
   }
 
-  if (ImGui::Button("Clear Editor Models")) {
+  if (ImGui::Button("Clear")) {
     // We check for editor-placed trees before removing, so we know whether to
     // rebuild the instanced tree buffer after the clear.
     bool hasEditorTree = false;

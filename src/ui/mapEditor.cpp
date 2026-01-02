@@ -46,15 +46,13 @@ void handleEditorPicking(AppState& state, GLFWwindow* window) {
     glm::vec3 rayDir(0.0f);
     if (getMouseRay(state, window, rayOrigin, rayDir)) {
       int hitIndex = pickModelInstance(state, rayOrigin, rayDir);
-      state.selectedInstance = hitIndex;
       if (hitIndex >= 0) {
+        state.selectedInstance = hitIndex;
         const ModelInstance& instance = state.modelInstances[hitIndex];
         const ModelAsset& asset = state.modelAssets[instance.assetIndex];
         const std::string& name =
             asset.id.empty() ? asset.path : asset.id;
         std::cout << "Selected model: " << name << std::endl;
-      } else {
-        std::cout << "Selected model: none" << std::endl;
       }
     }
   }
@@ -105,12 +103,12 @@ void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
   buildInstanceMatrix(instance, modelMatrix);
 
   ImGuizmo::OPERATION operation = getGizmoOperation(state);
-  bool changed = ImGuizmo::Manipulate(glm::value_ptr(view),
-                                      glm::value_ptr(projection), operation,
-                                      ImGuizmo::WORLD,
-                                      glm::value_ptr(modelMatrix));
+  bool changed = ImGuizmo::Manipulate(
+      glm::value_ptr(view), glm::value_ptr(projection), operation,
+      ImGuizmo::WORLD, glm::value_ptr(modelMatrix));
 
-  if (changed || ImGuizmo::IsUsing()) {
+  bool usingGizmo = ImGuizmo::IsUsing();
+  if (changed || usingGizmo) {
     float translation[3] = {};
     float rotation[3] = {};
     float scale[3] = {};
@@ -124,6 +122,12 @@ void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
       state.treeInstanceDirty = true;
     }
   }
+
+  static bool wasUsing = false;
+  if (wasUsing && !usingGizmo && instance.freeArea) {
+    state.treeDirty = true;
+  }
+  wasUsing = usingGizmo;
 }
 
 static bool getMouseRay(const AppState& state, GLFWwindow* window,

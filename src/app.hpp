@@ -63,6 +63,7 @@ struct AppState {
   float treeDensity = 6.5f;
   bool treeDirty = false;
   bool treeInstanceDirty = false;
+  float treeFreeAreaRadius = 6.0f;
   float treeRenderRadius = 28.0f;
   float treeUpdateDistance = 6.0f;
   glm::vec2 treeCullCenter = glm::vec2(0.0f);

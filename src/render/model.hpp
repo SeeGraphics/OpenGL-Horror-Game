@@ -52,6 +52,7 @@ struct ModelAsset {
   std::string path;
   Model model;
   ModelRenderSettings renderSettings;
+  bool freeArea = false;
 };
 
 struct ModelInstance {
@@ -60,12 +61,15 @@ struct ModelInstance {
   glm::vec3 rotation = glm::vec3(0.0f);
   glm::vec3 scale = glm::vec3(1.0f);
   bool isEditorPlaced = false;
+  bool freeArea = false;
+  float freeAreaRadius = 0.0f;
 };
 
 struct ModelTemplate {
   const char* id = nullptr;
   const char* path = nullptr;
   ModelRenderSettings renderSettings;
+  bool freeArea = false;
 };
 
 const ModelTemplate* GetModelTemplates(int* count);

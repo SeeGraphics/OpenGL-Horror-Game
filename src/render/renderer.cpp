@@ -407,7 +407,6 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                  GL_UNSIGNED_INT, 0);
 
   if (!state.modelInstances.empty()) {
-    bool drewTrees = false;
     if (state.treeAssetIndex >= 0 &&
         state.treeAssetIndex < static_cast<int>(state.modelAssets.size()) &&
         state.treeInstanceCount > 0) {
@@ -451,7 +450,6 @@ void renderFrame(AppState& state, GLFWwindow* window) {
           glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
                                   GL_UNSIGNED_INT, 0, state.treeInstanceCount);
         }
-        drewTrees = true;
       }
     }
 
@@ -464,7 +462,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
           instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
         continue;
       }
-      if (drewTrees && instance.assetIndex == state.treeAssetIndex) {
+      if (instance.assetIndex == state.treeAssetIndex) {
         continue;
       }
       if ((!state.flashlightShown || state.editorEnabled) &&

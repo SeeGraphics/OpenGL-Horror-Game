@@ -55,15 +55,15 @@ static ModelRenderSettings makeDeadTreeSettings() {
 
 static const ModelTemplate gModelTemplates[] = {
     {"Tree", "assets/models/pine_tree/source/pine_tree.fbx",
-     makeTreeSettings()},
+     makeTreeSettings(), false},
     {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
-     makeWalterSettings()},
-    {"Church", "assets/models/church/source/church.fbx", makeChurchSettings()},
+     makeWalterSettings(), false},
+    {"Church", "assets/models/church/source/church.fbx", makeChurchSettings(),
+     true},
     {"Flashlight", "assets/models/flashlight/source/Flashlight.fbx",
-     makeFlashlightSettings()},
+     makeFlashlightSettings(), false},
     {"Dead_Tree", "assets/models/dead_tree/source/dead_tree.fbx",
-     makeDeadTreeSettings()},
-
+     makeDeadTreeSettings(), false},
 };
 
 const ModelTemplate* GetModelTemplates(int* count) {

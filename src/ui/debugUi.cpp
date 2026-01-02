@@ -191,6 +191,28 @@ void drawMapEditorUi(AppState& state) {
     ImGui::EndTable();
   }
 
+  if (state.selectedInstance >= 0 &&
+      state.selectedInstance < static_cast<int>(state.modelInstances.size())) {
+    ModelInstance& instance = state.modelInstances[state.selectedInstance];
+    ImGui::Separator();
+    ImGui::Text("Tree Free Area");
+    bool hasFreeArea = instance.freeArea;
+    if (ImGui::Checkbox("Enabled", &hasFreeArea)) {
+      instance.freeArea = hasFreeArea;
+      if (instance.freeArea && instance.freeAreaRadius <= 0.0f) {
+        instance.freeAreaRadius = state.treeFreeAreaRadius;
+      }
+      state.treeDirty = true;
+    }
+    float radius = instance.freeAreaRadius;
+    ImGui::BeginDisabled(!instance.freeArea);
+    if (ImGui::SliderFloat("Radius", &radius, 0.0f, 200.0f)) {
+      instance.freeAreaRadius = radius;
+      state.treeDirty = true;
+    }
+    ImGui::EndDisabled();
+  }
+
   // Remove the most recent editor-placed instance.
   // Note: editor trees are still rendered through the instanced tree buffer,
   // so we flag treeInstanceDirty to rebuild that buffer immediately.

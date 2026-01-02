@@ -33,7 +33,7 @@ static float hashToUnitFloat(int x, int z, int seed) {
 }
 
 static int addModelAsset(AppState& state, const char* id, const char* path,
-                         const ModelRenderSettings& settings) {
+                         const ModelRenderSettings& settings, bool freeArea) {
   state.modelAssets.emplace_back();
   ModelAsset& asset = state.modelAssets.back();
   if (id) {
@@ -43,6 +43,7 @@ static int addModelAsset(AppState& state, const char* id, const char* path,
     asset.path = path;
   }
   asset.renderSettings = settings;
+  asset.freeArea = freeArea;
   if (!asset.path.empty()) {
     asset.model.Load(asset.path.c_str(), asset.renderSettings);
   }
@@ -63,6 +64,9 @@ int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
   instance.rotation = rotation;
   instance.scale = scale;
   instance.isEditorPlaced = isEditorPlaced;
+  const ModelAsset& asset = state.modelAssets[assetIndex];
+  instance.freeArea = asset.freeArea;
+  instance.freeAreaRadius = asset.freeArea ? state.treeFreeAreaRadius : 0.0f;
   state.modelInstances.push_back(instance);
   return static_cast<int>(state.modelInstances.size()) - 1;
 }
@@ -124,6 +128,32 @@ static void scatterTrees(AppState& state, int assetIndex) {
   std::vector<glm::vec3> placedPositions;
   placedPositions.reserve(static_cast<size_t>(cellsX * cellsZ));
 
+  struct TreeFreeZone {
+    glm::vec2 center;
+    float radius = 0.0f;
+  };
+  std::vector<TreeFreeZone> freeZones;
+  freeZones.reserve(state.modelInstances.size());
+
+  for (const ModelInstance& instance : state.modelInstances) {
+    if (!instance.freeArea) {
+      continue;
+    }
+    if (instance.assetIndex < 0 ||
+        instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
+      continue;
+    }
+    if (instance.assetIndex == assetIndex) {
+      continue;
+    }
+    float radius = instance.freeAreaRadius;
+    if (radius <= 0.0f) {
+      continue;
+    }
+    freeZones.push_back({glm::vec2(instance.position.x, instance.position.z),
+                         radius});
+  }
+
   // Map a world position to a spacing grid cell.
   auto getSpacingCell = [&](float xPos, float zPos, int& gx, int& gz) {
     gx = static_cast<int>(std::floor((xPos - start) / minDistance));
@@ -159,6 +189,13 @@ static void scatterTrees(AppState& state, int assetIndex) {
             return false;
           }
         }
+      }
+    }
+    for (const TreeFreeZone& zone : freeZones) {
+      float dx = zone.center.x - xPos;
+      float dz = zone.center.y - zPos;
+      if ((dx * dx + dz * dz) < zone.radius * zone.radius) {
+        return false;
       }
     }
     return true;
@@ -626,8 +663,8 @@ void initWorldModels(AppState& state) {
 
   for (int i = 0; i < templateCount; ++i) {
     const ModelTemplate& entry = templates[i];
-    int assetIndex =
-        addModelAsset(state, entry.id, entry.path, entry.renderSettings);
+    int assetIndex = addModelAsset(state, entry.id, entry.path,
+                                   entry.renderSettings, entry.freeArea);
 
     // get model asset
     if (entry.id && std::strcmp(entry.id, "Tree") == 0) {
@@ -693,12 +730,34 @@ void rebuildWorldTrees(AppState& state) {
     return;
   }
 
+  int selectedIndex = state.selectedInstance;
+  bool selectedWasTree = false;
+  int removedBefore = 0;
+  if (selectedIndex >= 0 &&
+      selectedIndex < static_cast<int>(state.modelInstances.size())) {
+    selectedWasTree = state.modelInstances[selectedIndex].assetIndex ==
+                      state.treeAssetIndex;
+    for (int i = 0; i < selectedIndex; ++i) {
+      if (state.modelInstances[i].assetIndex == state.treeAssetIndex) {
+        removedBefore++;
+      }
+    }
+  }
+
   state.modelInstances.erase(
       std::remove_if(state.modelInstances.begin(), state.modelInstances.end(),
                      [&](const ModelInstance& instance) {
                        return instance.assetIndex == state.treeAssetIndex;
                      }),
       state.modelInstances.end());
+
+  if (selectedIndex >= 0) {
+    if (selectedWasTree) {
+      state.selectedInstance = -1;
+    } else {
+      state.selectedInstance = selectedIndex - removedBefore;
+    }
+  }
 
   state.treeInstanceIndex = -1;
   scatterTrees(state, state.treeAssetIndex);

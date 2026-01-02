@@ -264,7 +264,7 @@ void Camera::ProcessMouse(double xpos, double ypos) {
                 cameraFront.z));  // so looking down doesnt stop all momentum
 }
 
-glm::mat4 Camera::GetViewMatrix() {
+glm::mat4 Camera::GetViewMatrix() const {
   glm::vec3 bobbedPos = cameraPos;
   bobbedPos.y += visualBobOffset;
 

@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
   std::string inc =
       "-I./src -I./third_party/imgui -I./third_party/imgui/backends "
       "-I./third_party/glad/include -I./third_party/stb "
-      "-I./third_party/miniaudio "
+      "-I./third_party/miniaudio -I./third_party/imguizmo "
       "-I/opt/homebrew/include";
   std::string lib =
       "-L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa "
@@ -107,9 +107,11 @@ int main(int argc, char** argv) {
        "build/imgui_impl_glfw.o"},
       {"third_party/imgui/backends/imgui_impl_opengl3.cpp",
        "build/imgui_impl_opengl3.o"},
+      {"third_party/imguizmo/ImGuizmo.cpp", "build/imguizmo.o"},
       {"src/app.cpp", "build/app.o"},
       {"src/audio/audio.cpp", "build/audio.o"},
       {"src/ui/debugUi.cpp", "build/debugUi.o"},
+      {"src/ui/mapEditor.cpp", "build/mapEditor.o"},
       {"src/render/renderer.cpp", "build/renderer.o"},
       {"src/render/model.cpp", "build/model.o"},
       {"src/scene/world.cpp", "build/world.o"},

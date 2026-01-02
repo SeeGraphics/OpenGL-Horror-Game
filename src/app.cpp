@@ -3,11 +3,13 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 // clang-format on
+
 #include "app.hpp"
 
 #include "render/renderer.hpp"
 #include "scene/world.hpp"
 #include "ui/debugUi.hpp"
+#include "ui/mapEditor.hpp"
 
 static AppState* g_state = nullptr;
 
@@ -64,6 +66,8 @@ void AppFrame(AppState& state, GLFWwindow* window) {
     }
     if (state.editorEnabled) {
       drawMapEditorUi(state);
+      handleEditorPicking(state, window);
+      updateMapEditorGizmo(state, window);
     }
   }
 

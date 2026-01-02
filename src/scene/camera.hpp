@@ -56,7 +56,7 @@ class Camera {
   void ProcessKeyboard(AppState& state, GLFWwindow* window, float deltaTime,
                        bool freeCam);
   void ProcessMouse(double xpos, double ypos);
-  glm::mat4 GetViewMatrix();
+  glm::mat4 GetViewMatrix() const;
 
  private:
   bool firstMouse = true;

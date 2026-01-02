@@ -121,21 +121,27 @@ static void processInput(GLFWwindow* window) {
     if (!eWasDown) {
       state.editorEnabled = !state.editorEnabled;
       state.freeCam = !state.freeCam;
-      state.renderDistance = 2000.0f;  // make sure we see whole map
-      state.ambientStrength = 2.5f;
-      state.skyboxIntensity = 1.0f;
-      state.fogDensity = 0.0f;
+      if (state.editorEnabled) {
+        state.editorSavedRenderDistance = state.renderDistance;
+        state.editorSavedAmbientStrength = state.ambientStrength;
+        state.editorSavedSkyboxIntensity = state.skyboxIntensity;
+        state.editorSavedFogDensity = state.fogDensity;
+        state.editorHasSavedValues = true;
+
+        state.renderDistance = 2000.0f;  // make sure we see whole map
+        state.ambientStrength = 2.5f;
+        state.skyboxIntensity = 1.0f;
+        state.fogDensity = 0.0f;
+      } else if (state.editorHasSavedValues) {
+        state.renderDistance = state.editorSavedRenderDistance;
+        state.ambientStrength = state.editorSavedAmbientStrength;
+        state.skyboxIntensity = state.editorSavedSkyboxIntensity;
+        state.fogDensity = state.editorSavedFogDensity;
+      }
     }
     eWasDown = true;
   } else {
     eWasDown = false;
-    // revert to default values
-    if (!state.editorEnabled) {
-      state.renderDistance = 1000.0f;
-      state.ambientStrength = 1.55f;
-      state.skyboxIntensity = 0.55f;
-      state.fogDensity = 0.02f;
-    }
   }
 
   // toggle freeCam

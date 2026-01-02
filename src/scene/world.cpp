@@ -93,7 +93,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
   if (density > 8.0f) density = 8.0f;
   const float baseScale = 0.003f;
   const float scaleJitter = 0.35f;  // different tree sizes
-  const float jitterScale = 10.0f;  // scatter more evenly
+  const float jitterScale = 1.0f;  // keep offsets inside each cell
 
   int gridSize = state.floorSize * 2;
   float tileSize = state.cubeScale;
@@ -109,7 +109,62 @@ static void scatterTrees(AppState& state, int assetIndex) {
 
   int instanceStart = static_cast<int>(state.modelInstances.size());
   int spawned = 0;
+  // Minimum spacing between trees (XZ plane).
+  float minDistance = state.cubeScale * 2.0f;
+  float minDistanceSq = minDistance * minDistance;
 
+  // Spatial grid for fast neighbor checks (bucketed by minDistance).
+  int spacingCellsX = static_cast<int>(std::ceil(span / minDistance));
+  int spacingCellsZ = static_cast<int>(std::ceil(span / minDistance));
+  if (spacingCellsX < 1) spacingCellsX = 1;
+  if (spacingCellsZ < 1) spacingCellsZ = 1;
+  std::vector<std::vector<int>> spacingGrid(
+      static_cast<size_t>(spacingCellsX) *
+      static_cast<size_t>(spacingCellsZ));
+  std::vector<glm::vec3> placedPositions;
+  placedPositions.reserve(static_cast<size_t>(cellsX * cellsZ));
+
+  // Map a world position to a spacing grid cell.
+  auto getSpacingCell = [&](float xPos, float zPos, int& gx, int& gz) {
+    gx = static_cast<int>(std::floor((xPos - start) / minDistance));
+    gz = static_cast<int>(std::floor((zPos - start) / minDistance));
+    if (gx < 0 || gz < 0 || gx >= spacingCellsX || gz >= spacingCellsZ) {
+      return false;
+    }
+    return true;
+  };
+
+  // Check the 3x3 neighbor buckets for a close tree.
+  auto canPlace = [&](float xPos, float zPos) {
+    int gx = 0;
+    int gz = 0;
+    if (!getSpacingCell(xPos, zPos, gx, gz)) {
+      return false;
+    }
+    int minX = std::max(0, gx - 1);
+    int maxX = std::min(spacingCellsX - 1, gx + 1);
+    int minZ = std::max(0, gz - 1);
+    int maxZ = std::min(spacingCellsZ - 1, gz + 1);
+    for (int nz = minZ; nz <= maxZ; ++nz) {
+      for (int nx = minX; nx <= maxX; ++nx) {
+        const std::vector<int>& bucket =
+            spacingGrid[static_cast<size_t>(nz) *
+                            static_cast<size_t>(spacingCellsX) +
+                        static_cast<size_t>(nx)];
+        for (int index : bucket) {
+          const glm::vec3& other = placedPositions[index];
+          float dx = other.x - xPos;
+          float dz = other.z - zPos;
+          if ((dx * dx + dz * dz) < minDistanceSq) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
+
+  // Iterate over coarse cells and place instances with retries.
   for (int z = 0; z < cellsZ; ++z) {
     float cellCenterZ = start + (static_cast<float>(z) + 0.5f) * cellSize;
     if (cellCenterZ < start || cellCenterZ > maxPos) {
@@ -134,15 +189,26 @@ static void scatterTrees(AppState& state, int assetIndex) {
         continue;
       }
 
-      for (int i = 0; i < instanceCount; ++i) {
-        int seedBase = 43 + (i * 7);
+      int placed = 0;
+      int attempt = 0;
+      int maxAttempts = std::max(instanceCount * 6, 4);
+      // Try multiple candidates to satisfy spacing constraints.
+      while (placed < instanceCount && attempt < maxAttempts) {
+        int seedBase = 43 + (attempt * 7);
         float offsetX =
             (hashToUnitFloat(x, z, seedBase) - 0.5f) * cellSize * jitterScale;
         float offsetZ = (hashToUnitFloat(x, z, seedBase + 1) - 0.5f) *
                         cellSize * jitterScale;
         float xPos = cellCenterX + offsetX;
         float zPos = cellCenterZ + offsetZ;
+        // Discard candidates outside world bounds.
         if (xPos < start || xPos > maxPos || zPos < start || zPos > maxPos) {
+          attempt++;
+          continue;
+        }
+        // Enforce min spacing against nearby placements.
+        if (!canPlace(xPos, zPos)) {
+          attempt++;
           continue;
         }
         float yPos = getTerrainHeightAt(state, xPos, zPos);
@@ -151,10 +217,23 @@ static void scatterTrees(AppState& state, int assetIndex) {
         float scale =
             baseScale * (1.0f - scaleJitter + (scaleRand * scaleJitter * 2.0f));
 
+        // Record the instance and cache its position in the spacing grid.
         addModelInstance(state, assetIndex, glm::vec3(xPos, yPos, zPos),
                          glm::vec3(0.0f, rotationY, 0.0f), glm::vec3(scale),
                          false);
+        int gx = 0;
+        int gz = 0;
+        if (getSpacingCell(xPos, zPos, gx, gz)) {
+          int positionIndex = static_cast<int>(placedPositions.size());
+          placedPositions.push_back(glm::vec3(xPos, yPos, zPos));
+          spacingGrid[static_cast<size_t>(gz) *
+                          static_cast<size_t>(spacingCellsX) +
+                      static_cast<size_t>(gx)]
+              .push_back(positionIndex);
+        }
         spawned++;
+        placed++;
+        attempt++;
       }
     }
   }

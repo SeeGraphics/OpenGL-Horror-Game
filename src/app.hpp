@@ -23,12 +23,12 @@ struct AppState {
   float terrainResolutionScale = 4.0f;  // more chunky floor / terrain
 
   // RENDER SETTINGS
-  float renderDistance = 1000.0f;
+  float renderDistance = 250.0f;
   float renderScale =
       0.25f;  // makes game look like shit but run good, embrace ps1 graphics ig
 
   // ENVIRONMENT LIGHTING
-  float ambientStrength = 1.55f;  // dark: 0.05f, increased for testing
+  float ambientStrength = 0.010f;  // dark: 0.05f, increased for testing
   float diffuseStrength = 0.35f;
   float specularStrength = 0.010f;  // get rid of those circles on the floor
   float shininess = 32.0f;
@@ -38,35 +38,35 @@ struct AppState {
   glm::vec3 moonColor = glm::vec3(0.6f, 0.65f, 0.8f);
 
   // FLASHLIGHT
-  float flashlightBrightness = 3.5f;
-  float flashlightRadius = 28.0f;
+  float flashlightBrightness = 5.0f;
+  float flashlightRadius = 37.0f;
   glm::vec3 flashlightColor = glm::vec3(1.0f, 0.95f, 0.85f);
-  float flashlightOffsetForward = 0.45f;
-  float flashlightOffsetRight = 0.18f;
-  float flashlightOffsetDown = -0.12f;
+  float flashlightOffsetForward = 0.450f;
+  float flashlightOffsetRight = 0.370f;
+  float flashlightOffsetDown = -0.305f;
   glm::vec3 flashlightBeamOffset = glm::vec3(0.0f);
-  glm::vec3 flashlightBeamForward = glm::vec3(0.0f, 0.0f, -1.0f);
+  glm::vec3 flashlightBeamForward = glm::vec3(0.127f, -0.225f, -0.831f);
   bool flashlightShown = true;
 
   // FOG
-  float fogDensity = 0.02f;
+  float fogDensity = 0.250f;
   glm::vec3 fogColor = glm::vec3(0.02f, 0.02f, 0.03f);
 
   // TERRAIN EDITING
   float heightmapScale = 40.0f;
   bool terrainDirty = true;  // was terrain modified (for hotloading)
-  float grassDensity = 0.05f;
+  float grassDensity = 5.0f;
   float grassIntensity = 0.4f;
-  float grassRenderRadius = 90.0f;
+  float grassRenderRadius = 25.0f;
   bool grassDirty = true;
   glm::vec2 grassCenter = glm::vec2(0.0f);
-  float treeDensity = 0.02f;
+  float treeDensity = 8.0f;
   bool treeDirty = false;
   bool treeInstanceDirty = false;
-  float treeRenderRadius = 60.0f;
+  float treeRenderRadius = 28.0f;
   float treeUpdateDistance = 6.0f;
   glm::vec2 treeCullCenter = glm::vec2(0.0f);
-  float skyboxIntensity = 0.55f;  // dark: 0.05f, increased for testing
+  float skyboxIntensity = 0.015f;  // dark: 0.05f, increased for testing
 
   // MAPEDITOR
   bool editorEnabled = false;
@@ -75,6 +75,11 @@ struct AppState {
   // reuse "q" mouse toggle
   // force freecam true
   bool editorWantsMouse = false;
+  bool editorHasSavedValues = false;
+  float editorSavedRenderDistance = 0.0f;
+  float editorSavedAmbientStrength = 0.0f;
+  float editorSavedSkyboxIntensity = 0.0f;
+  float editorSavedFogDensity = 0.0f;
 
   // OTHER
   bool fullscreen = true;

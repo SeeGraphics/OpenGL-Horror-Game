@@ -1,9 +1,12 @@
 
 /build
+/.vscode
+/.cache
 nob
 todo.txt
 updates.txt
 AGENTS.md
+compile_commands.json   
 
 # macOS metadata files
 .DS_Store

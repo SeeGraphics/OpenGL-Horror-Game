@@ -4,11 +4,11 @@
 struct GLFWwindow;
 struct AppState;
 
-bool initDebugUi(GLFWwindow* window);
+bool initDebugUi(GLFWwindow *window);
 void beginUiFrame();
 void beginMapEditorUiFrame();
-void drawDebugUi(AppState& state);
-void drawMapEditorUi(AppState& state);
+void drawDebugUi(AppState &state);
+void drawMapEditorUi(AppState &state);
 void endDebugUiFrame();
 void shutdownDebugUi();
 

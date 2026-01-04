@@ -11,14 +11,14 @@
 #include "ui/debugUi.hpp"
 #include "ui/mapEditor.hpp"
 
-static AppState* g_state = nullptr;
+static AppState *g_state = nullptr;
 
-static void processInput(GLFWwindow* window);
-static void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-static void framebuffer_size_callback(GLFWwindow* window, int width,
+static void processInput(GLFWwindow *window);
+static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+static void framebuffer_size_callback(GLFWwindow *window, int width,
                                       int height);
 
-bool AppInit(AppState& state, GLFWwindow* window) {
+bool AppInit(AppState &state, GLFWwindow *window) {
   g_state = &state;
   glfwSetCursorPosCallback(window, mouse_callback);
 
@@ -42,7 +42,7 @@ bool AppInit(AppState& state, GLFWwindow* window) {
   return true;
 }
 
-void AppFrame(AppState& state, GLFWwindow* window) {
+void AppFrame(AppState &state, GLFWwindow *window) {
   static bool wasGrounded = true;
 
   // calculate delta time
@@ -105,16 +105,17 @@ void AppFrame(AppState& state, GLFWwindow* window) {
   glfwPollEvents();
 }
 
-void AppShutdown(AppState& state) {
+void AppShutdown(AppState &state) {
   renderShutdown(state);
   shutdownDebugUi();
   shutdownAudio(state.audio);
   g_state = nullptr;
 }
 
-static void processInput(GLFWwindow* window) {
-  if (!g_state) return;
-  AppState& state = *g_state;
+static void processInput(GLFWwindow *window) {
+  if (!g_state)
+    return;
+  AppState &state = *g_state;
 
   if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     glfwSetWindowShouldClose(window, true);
@@ -132,7 +133,7 @@ static void processInput(GLFWwindow* window) {
         state.editorSavedFogDensity = state.fogDensity;
         state.editorHasSavedValues = true;
 
-        state.renderDistance = 2000.0f;  // make sure we see whole map
+        state.renderDistance = 2000.0f; // make sure we see whole map
         state.ambientStrength = 2.5f;
         state.skyboxIntensity = 1.0f;
         state.fogDensity = 0.0f;
@@ -152,7 +153,7 @@ static void processInput(GLFWwindow* window) {
   static bool vWasDown = false;
   if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
     if (!vWasDown) {
-      state.freeCam = !state.freeCam;  // Toggle only once per press
+      state.freeCam = !state.freeCam; // Toggle only once per press
     }
     vWasDown = true;
   } else {
@@ -162,8 +163,8 @@ static void processInput(GLFWwindow* window) {
   if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) {
     if (!state.fullscreen) {
       // Switch to fullscreen
-      GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-      const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+      GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+      const GLFWvidmode *mode = glfwGetVideoMode(monitor);
       glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height,
                            mode->refreshRate);
       state.fullscreen = true;
@@ -200,15 +201,16 @@ static void processInput(GLFWwindow* window) {
   }
 }
 
-static void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
   (void)window;
-  if (!g_state) return;
+  if (!g_state)
+    return;
   if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
     g_state->camera.ProcessMouse(xpos, ypos);
   }
 }
 
-static void framebuffer_size_callback(GLFWwindow* window, int width,
+static void framebuffer_size_callback(GLFWwindow *window, int width,
                                       int height) {
   (void)window;
   glViewport(0, 0, width, height);

@@ -15,23 +15,23 @@
 
 #include "app.hpp"
 
-static bool getMouseRay(const AppState& state, GLFWwindow* window,
-                        glm::vec3& origin, glm::vec3& direction);
-static int pickModelInstance(const AppState& state, const glm::vec3& origin,
-                             const glm::vec3& direction);
-static void buildInstanceMatrix(const ModelInstance& instance,
-                                glm::mat4& modelMatrix);
-static ImGuizmo::OPERATION getGizmoOperation(AppState& state);
-static void updateGizmoHotkeys(AppState& state, GLFWwindow* window);
+static bool getMouseRay(const AppState &state, GLFWwindow *window,
+                        glm::vec3 &origin, glm::vec3 &direction);
+static int pickModelInstance(const AppState &state, const glm::vec3 &origin,
+                             const glm::vec3 &direction);
+static void buildInstanceMatrix(const ModelInstance &instance,
+                                glm::mat4 &modelMatrix);
+static ImGuizmo::OPERATION getGizmoOperation(AppState &state);
+static void updateGizmoHotkeys(AppState &state, GLFWwindow *window);
 
-void handleEditorPicking(AppState& state, GLFWwindow* window) {
+void handleEditorPicking(AppState &state, GLFWwindow *window) {
   if (!state.editorEnabled) {
     return;
   }
   if (glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_NORMAL) {
     return;
   }
-  ImGuiIO& io = ImGui::GetIO();
+  ImGuiIO &io = ImGui::GetIO();
   if (io.WantCaptureMouse) {
     return;
   }
@@ -48,10 +48,9 @@ void handleEditorPicking(AppState& state, GLFWwindow* window) {
       int hitIndex = pickModelInstance(state, rayOrigin, rayDir);
       if (hitIndex >= 0) {
         state.selectedInstance = hitIndex;
-        const ModelInstance& instance = state.modelInstances[hitIndex];
-        const ModelAsset& asset = state.modelAssets[instance.assetIndex];
-        const std::string& name =
-            asset.id.empty() ? asset.path : asset.id;
+        const ModelInstance &instance = state.modelInstances[hitIndex];
+        const ModelAsset &asset = state.modelAssets[instance.assetIndex];
+        const std::string &name = asset.id.empty() ? asset.path : asset.id;
         std::cout << "Selected model: " << name << std::endl;
       }
     }
@@ -59,7 +58,7 @@ void handleEditorPicking(AppState& state, GLFWwindow* window) {
   leftWasDown = (leftState == GLFW_PRESS);
 }
 
-void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
+void updateMapEditorGizmo(AppState &state, GLFWwindow *window) {
   if (!state.editorEnabled) {
     return;
   }
@@ -67,23 +66,22 @@ void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
     return;
   }
   if (state.selectedInstance < 0 ||
-      state.selectedInstance >=
-          static_cast<int>(state.modelInstances.size())) {
+      state.selectedInstance >= static_cast<int>(state.modelInstances.size())) {
     return;
   }
 
-  ModelInstance& instance = state.modelInstances[state.selectedInstance];
+  ModelInstance &instance = state.modelInstances[state.selectedInstance];
   if (instance.assetIndex < 0 ||
       instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
     return;
   }
 
-  const ModelAsset& asset = state.modelAssets[instance.assetIndex];
+  const ModelAsset &asset = state.modelAssets[instance.assetIndex];
   if (!asset.model.IsLoaded()) {
     return;
   }
 
-  ImGuiIO& io = ImGui::GetIO();
+  ImGuiIO &io = ImGui::GetIO();
   if (io.WantCaptureKeyboard) {
     return;
   }
@@ -114,8 +112,8 @@ void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
     float scale[3] = {};
     ImGuizmo::DecomposeMatrixToComponents(glm::value_ptr(modelMatrix),
                                           translation, rotation, scale);
-    instance.position = glm::vec3(translation[0], translation[1],
-                                  translation[2]);
+    instance.position =
+        glm::vec3(translation[0], translation[1], translation[2]);
     instance.rotation = glm::vec3(rotation[0], rotation[1], rotation[2]);
     instance.scale = glm::vec3(scale[0], scale[1], scale[2]);
     if (instance.assetIndex == state.treeAssetIndex) {
@@ -130,8 +128,8 @@ void updateMapEditorGizmo(AppState& state, GLFWwindow* window) {
   wasUsing = usingGizmo;
 }
 
-static bool getMouseRay(const AppState& state, GLFWwindow* window,
-                        glm::vec3& origin, glm::vec3& direction) {
+static bool getMouseRay(const AppState &state, GLFWwindow *window,
+                        glm::vec3 &origin, glm::vec3 &direction) {
   double mouseX = 0.0;
   double mouseY = 0.0;
   glfwGetCursorPos(window, &mouseX, &mouseY);
@@ -164,13 +162,13 @@ static bool getMouseRay(const AppState& state, GLFWwindow* window,
   return true;
 }
 
-static int pickModelInstance(const AppState& state, const glm::vec3& origin,
-                             const glm::vec3& direction) {
+static int pickModelInstance(const AppState &state, const glm::vec3 &origin,
+                             const glm::vec3 &direction) {
   float bestT = std::numeric_limits<float>::max();
   int bestIndex = -1;
 
   for (int i = 0; i < static_cast<int>(state.modelInstances.size()); ++i) {
-    const ModelInstance& instance = state.modelInstances[i];
+    const ModelInstance &instance = state.modelInstances[i];
     if (instance.assetIndex < 0 ||
         instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
       continue;
@@ -181,7 +179,7 @@ static int pickModelInstance(const AppState& state, const glm::vec3& origin,
       continue;
     }
 
-    const ModelAsset& asset = state.modelAssets[instance.assetIndex];
+    const ModelAsset &asset = state.modelAssets[instance.assetIndex];
     if (!asset.model.IsLoaded()) {
       continue;
     }
@@ -222,8 +220,8 @@ static int pickModelInstance(const AppState& state, const glm::vec3& origin,
   return bestIndex;
 }
 
-static void buildInstanceMatrix(const ModelInstance& instance,
-                                glm::mat4& modelMatrix) {
+static void buildInstanceMatrix(const ModelInstance &instance,
+                                glm::mat4 &modelMatrix) {
   modelMatrix = glm::mat4(1.0f);
   modelMatrix = glm::translate(modelMatrix, instance.position);
   modelMatrix = glm::rotate(modelMatrix, glm::radians(instance.rotation.y),
@@ -235,23 +233,23 @@ static void buildInstanceMatrix(const ModelInstance& instance,
   modelMatrix = glm::scale(modelMatrix, instance.scale);
 }
 
-static ImGuizmo::OPERATION getGizmoOperation(AppState& state) {
+static ImGuizmo::OPERATION getGizmoOperation(AppState &state) {
   if (state.gizmoOperation < 0) {
     state.gizmoOperation = GizmoTranslate;
   }
 
   switch (state.gizmoOperation) {
-    case GizmoRotate:
-      return ImGuizmo::ROTATE;
-    case GizmoScale:
-      return ImGuizmo::SCALE;
-    case GizmoTranslate:
-    default:
-      return ImGuizmo::TRANSLATE;
+  case GizmoRotate:
+    return ImGuizmo::ROTATE;
+  case GizmoScale:
+    return ImGuizmo::SCALE;
+  case GizmoTranslate:
+  default:
+    return ImGuizmo::TRANSLATE;
   }
 }
 
-static void updateGizmoHotkeys(AppState& state, GLFWwindow* window) {
+static void updateGizmoHotkeys(AppState &state, GLFWwindow *window) {
   static bool oneWasDown = false;
   static bool twoWasDown = false;
   static bool threeWasDown = false;

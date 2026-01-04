@@ -10,7 +10,7 @@ enum GizmoMode {
   GizmoScale = 2,
 };
 
-void handleEditorPicking(AppState& state, GLFWwindow* window);
-void updateMapEditorGizmo(AppState& state, GLFWwindow* window);
+void handleEditorPicking(AppState &state, GLFWwindow *window);
+void updateMapEditorGizmo(AppState &state, GLFWwindow *window);
 
 #endif

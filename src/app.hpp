@@ -20,17 +20,17 @@ struct AppState {
   // TERRAIN
   int floorSize = 500;
   float floorY = -1.0f;
-  float terrainResolutionScale = 4.0f;  // more chunky floor / terrain
+  float terrainResolutionScale = 4.0f; // more chunky floor / terrain
 
   // RENDER SETTINGS
   float renderDistance = 250.0f;
   float renderScale =
-      0.25f;  // makes game look like shit but run good, embrace ps1 graphics ig
+      0.25f; // makes game look like shit but run good, embrace ps1 graphics ig
 
   // ENVIRONMENT LIGHTING
-  float ambientStrength = 0.010f;  // dark: 0.05f, increased for testing
+  float ambientStrength = 0.010f; // dark: 0.05f, increased for testing
   float diffuseStrength = 0.35f;
-  float specularStrength = 0.010f;  // get rid of those circles on the floor
+  float specularStrength = 0.010f; // get rid of those circles on the floor
   float shininess = 32.0f;
 
   // MOON
@@ -54,7 +54,7 @@ struct AppState {
 
   // TERRAIN EDITING
   float heightmapScale = 40.0f;
-  bool terrainDirty = true;  // was terrain modified (for hotloading)
+  bool terrainDirty = true; // was terrain modified (for hotloading)
   float grassDensity = 5.0f;
   float grassIntensity = 0.4f;
   float grassRenderRadius = 25.0f;
@@ -67,7 +67,7 @@ struct AppState {
   float treeRenderRadius = 28.0f;
   float treeUpdateDistance = 6.0f;
   glm::vec2 treeCullCenter = glm::vec2(0.0f);
-  float skyboxIntensity = 0.015f;  // dark: 0.05f, increased for testing
+  float skyboxIntensity = 0.015f; // dark: 0.05f, increased for testing
 
   // MAPEDITOR
   bool editorEnabled = false;
@@ -92,9 +92,9 @@ struct AppState {
   Camera camera;
   AudioSystem audio;
 
-  Shader* worldShader = nullptr;
-  Shader* skyboxShader = nullptr;
-  Shader* grassShader = nullptr;
+  Shader *worldShader = nullptr;
+  Shader *skyboxShader = nullptr;
+  Shader *grassShader = nullptr;
 
   // MODELS
   std::vector<ModelAsset> modelAssets;
@@ -113,8 +113,8 @@ struct AppState {
   // MODEL SCALES
   float walterScale = 0.001f;
   float treeScale =
-      0.001f;  // seperate from base Scale (e.g this doesnt affect environment
-               // trees, only ones placed with through the UI)
+      0.001f; // seperate from base Scale (e.g this doesnt affect environment
+              // trees, only ones placed with through the UI)
   float churchScale = 0.1f;
   float deadtreeScale = 0.01f;
   float flashlightScale = 0.007f;
@@ -147,8 +147,8 @@ struct AppState {
   std::vector<glm::vec3> grassInstances;
 };
 
-bool AppInit(AppState& state, GLFWwindow* window);
-void AppFrame(AppState& state, GLFWwindow* window);
-void AppShutdown(AppState& state);
+bool AppInit(AppState &state, GLFWwindow *window);
+void AppFrame(AppState &state, GLFWwindow *window);
+void AppShutdown(AppState &state);
 
 #endif

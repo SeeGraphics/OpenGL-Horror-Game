@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
       "-I./src -I./third_party/imgui -I./third_party/imgui/backends "
       "-I./third_party/glad/include -I./third_party/stb "
       "-I./third_party/miniaudio -I./third_party/imguizmo "
-      "-I/opt/homebrew/include";
+      "-I./third_party/nlohmann -I/opt/homebrew/include";
   std::string lib =
       "-L/opt/homebrew/lib -lglfw -framework OpenGL -framework Cocoa "
       "-framework IOKit -framework CoreVideo "

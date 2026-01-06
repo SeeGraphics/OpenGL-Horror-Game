@@ -10,9 +10,15 @@
 #include <cctype>
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
+
+#include "third_party/nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 // decided to just use models with 1 fbx and 1 texture.png
 // -> is much easier to load and works super well with simple
@@ -53,9 +59,39 @@ static ModelRenderSettings makeDeadTreeSettings() {
   return settings;
 }
 
+static ModelRenderSettings makeBarrelSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
+static ModelRenderSettings makeWhiteVanSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
+static ModelRenderSettings makeHandRadioSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
+static ModelRenderSettings makeDeadmanSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
+static ModelRenderSettings makeDeadBodyPlasticbagSettings() {
+  ModelRenderSettings settings;
+  settings.flipUv = false;
+  return settings;
+}
+
 static const ModelTemplate gModelTemplates[] = {
-    {"Tree", "assets/models/pine_tree/source/pine_tree.fbx",
-     makeTreeSettings(), false},
+    {"Tree", "assets/models/pine_tree/source/pine_tree.fbx", makeTreeSettings(),
+     false},
     {"WalterWhite", "assets/models/walter_white/source/Hussainberg.fbx",
      makeWalterSettings(), false},
     {"Church", "assets/models/church/source/church.fbx", makeChurchSettings(),
@@ -64,9 +100,20 @@ static const ModelTemplate gModelTemplates[] = {
      makeFlashlightSettings(), false},
     {"Dead_Tree", "assets/models/dead_tree/source/dead_tree.fbx",
      makeDeadTreeSettings(), false},
+    {"metal_barrel", "assets/models/metal_barrel/source/MetalBarrel.fbx",
+     makeBarrelSettings(), false},
+    {"white_van", "assets/models/white_van/source/white_van.fbx",
+     makeWhiteVanSettings(), false},
+    {"hand_radio", "assets/models/hand_radio/source/Radio.fbx",
+     makeHandRadioSettings(), false},
+    {"deadman", "assets/models/deadman/source/deadman.fbx",
+     makeDeadmanSettings(), false},
+    {"dead_body_plasticbag",
+     "assets/models/dead_body_plasticbag/source/deadbody.fbx",
+     makeDeadBodyPlasticbagSettings(), false},
 };
 
-const ModelTemplate* GetModelTemplates(int* count) {
+const ModelTemplate *GetModelTemplates(int *count) {
   if (count) {
     *count =
         static_cast<int>(sizeof(gModelTemplates) / sizeof(gModelTemplates[0]));
@@ -79,7 +126,7 @@ struct TextureInfo {
   std::string path;
 };
 
-static std::string getDirectory(const std::string& path) {
+static std::string getDirectory(const std::string &path) {
   size_t lastSlash = path.find_last_of("/\\");
   if (lastSlash == std::string::npos) {
     return ".";
@@ -87,7 +134,7 @@ static std::string getDirectory(const std::string& path) {
   return path.substr(0, lastSlash);
 }
 
-static std::string getFileName(const std::string& path) {
+static std::string getFileName(const std::string &path) {
   size_t lastSlash = path.find_last_of("/\\");
   if (lastSlash == std::string::npos) {
     return path;
@@ -95,7 +142,7 @@ static std::string getFileName(const std::string& path) {
   return path.substr(lastSlash + 1);
 }
 
-static std::string joinPath(const std::string& base, const std::string& child) {
+static std::string joinPath(const std::string &base, const std::string &child) {
   if (child.empty()) {
     return base;
   }
@@ -105,7 +152,7 @@ static std::string joinPath(const std::string& base, const std::string& child) {
   return base + "/" + child;
 }
 
-static std::string toLower(const std::string& value) {
+static std::string toLower(const std::string &value) {
   std::string out = value;
   std::transform(out.begin(), out.end(), out.begin(), [](unsigned char c) {
     return static_cast<char>(std::tolower(c));
@@ -113,19 +160,19 @@ static std::string toLower(const std::string& value) {
   return out;
 }
 
-static std::string chooseFallbackBaseName(const aiScene* scene, aiMesh* mesh) {
+static std::string chooseFallbackBaseName(const aiScene *scene, aiMesh *mesh) {
   std::string meshName;
   if (mesh && mesh->mName.length > 0) {
     meshName = mesh->mName.C_Str();
   }
   std::string materialName;
   if (scene && mesh && mesh->mMaterialIndex < scene->mNumMaterials) {
-    aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+    aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
     if (material) {
-      aiString materialName;
-      if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
-        if (materialName.length > 0) {
-          materialName = materialName.C_Str();
+      aiString aiMaterialName;
+      if (material->Get(AI_MATKEY_NAME, aiMaterialName) == AI_SUCCESS) {
+        if (aiMaterialName.length > 0) {
+          materialName = aiMaterialName.C_Str();
         }
       }
     }
@@ -148,7 +195,7 @@ static std::string chooseFallbackBaseName(const aiScene* scene, aiMesh* mesh) {
   return "tree";
 }
 
-static int chooseUvChannel(const aiScene* scene, aiMesh* mesh) {
+static int chooseUvChannel(const aiScene *scene, aiMesh *mesh) {
   int fallback = -1;
   if (mesh) {
     for (int channel = 0; channel < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++channel) {
@@ -165,7 +212,7 @@ static int chooseUvChannel(const aiScene* scene, aiMesh* mesh) {
   if (mesh->mMaterialIndex >= scene->mNumMaterials) {
     return fallback;
   }
-  aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+  aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
   if (!material) {
     return fallback;
   }
@@ -227,13 +274,13 @@ static unsigned int getDefaultNormalTexture() {
   return textureId;
 }
 
-static unsigned int loadTextureFromFile(const std::string& path) {
+static unsigned int loadTextureFromFile(const std::string &path) {
   int width = 0;
   int height = 0;
   int channels = 0;
 
   stbi_set_flip_vertically_on_load(true);
-  unsigned char* data = stbi_load(path.c_str(), &width, &height, &channels, 4);
+  unsigned char *data = stbi_load(path.c_str(), &width, &height, &channels, 4);
   stbi_set_flip_vertically_on_load(false);
 
   if (!data) {
@@ -258,11 +305,11 @@ static unsigned int loadTextureFromFile(const std::string& path) {
   return textureId;
 }
 
-static TextureInfo loadTextureByBaseName(const std::string& baseName,
-                                         const std::string& texturesDirectory) {
+static TextureInfo loadTextureByBaseName(const std::string &baseName,
+                                         const std::string &texturesDirectory) {
   TextureInfo result;
-  const char* extensions[] = {".png", ".jpg", ".jpeg"};
-  for (const char* ext : extensions) {
+  const char *extensions[] = {".png", ".jpg", ".jpeg"};
+  for (const char *ext : extensions) {
     std::string path = joinPath(texturesDirectory, baseName + ext);
     unsigned int textureId = loadTextureFromFile(path);
     if (textureId != 0) {
@@ -274,9 +321,30 @@ static TextureInfo loadTextureByBaseName(const std::string& baseName,
   return result;
 }
 
-static TextureInfo loadMaterialTexture(const aiScene* scene, aiMesh* mesh,
-                                       const std::string& modelDirectory,
-                                       const std::string& texturesDirectory,
+static std::map<std::string, std::string>
+loadTextureMapping(const std::string &modelDirectory) {
+  std::map<std::string, std::string> mapping;
+  std::string jsonPath = joinPath(modelDirectory, "texture_mapping.json");
+  std::ifstream file(jsonPath);
+  if (!file.is_open()) {
+    return mapping;
+  }
+
+  try {
+    json j = json::parse(file);
+    for (auto &[key, value] : j.items()) {
+      mapping[key] = value.get<std::string>();
+    }
+  } catch (const json::exception &e) {
+    // JSON parse error - return empty mapping
+  }
+
+  return mapping;
+}
+
+static TextureInfo loadMaterialTexture(const aiScene *scene, aiMesh *mesh,
+                                       const std::string &modelDirectory,
+                                       const std::string &texturesDirectory,
                                        aiTextureType type) {
   TextureInfo result;
   if (!scene || !mesh) {
@@ -286,7 +354,7 @@ static TextureInfo loadMaterialTexture(const aiScene* scene, aiMesh* mesh,
     return result;
   }
 
-  aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+  aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
   if (!material) {
     return result;
   }
@@ -303,6 +371,7 @@ static TextureInfo loadMaterialTexture(const aiScene* scene, aiMesh* mesh,
   std::string pathValue = texturePath.C_Str();
   std::string fileName = getFileName(pathValue);
 
+  // Try direct path first (relative to model directory)
   std::string directPath = joinPath(modelDirectory, pathValue);
   unsigned int directId = loadTextureFromFile(directPath);
   if (directId != 0) {
@@ -311,6 +380,15 @@ static TextureInfo loadMaterialTexture(const aiScene* scene, aiMesh* mesh,
     return result;
   }
 
+  // Try absolute path if direct path failed
+  unsigned int absoluteId = loadTextureFromFile(pathValue);
+  if (absoluteId != 0) {
+    result.id = absoluteId;
+    result.path = pathValue;
+    return result;
+  }
+
+  // Try in textures directory
   std::string texturesPath = joinPath(texturesDirectory, fileName);
   unsigned int texturesId = loadTextureFromFile(texturesPath);
   if (texturesId != 0) {
@@ -322,48 +400,72 @@ static TextureInfo loadMaterialTexture(const aiScene* scene, aiMesh* mesh,
   return result;
 }
 
-static TextureInfo loadDiffuseTexture(const aiScene* scene, aiMesh* mesh,
-                                      const std::string& modelDirectory,
-                                      const std::string& texturesDirectory) {
-  std::string baseName = chooseFallbackBaseName(scene, mesh);
-  if (baseName == "branches") {
-    TextureInfo forced = loadTextureByBaseName("branches", texturesDirectory);
-    if (forced.id != 0) {
-      return forced;
+static std::string getMaterialName(const aiScene *scene, aiMesh *mesh) {
+  if (!scene || !mesh) {
+    return "";
+  }
+  if (mesh->mMaterialIndex >= scene->mNumMaterials) {
+    return "";
+  }
+
+  aiMaterial *material = scene->mMaterials[mesh->mMaterialIndex];
+  if (!material) {
+    return "";
+  }
+
+  aiString materialName;
+  if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS) {
+    if (materialName.length > 0) {
+      return std::string(materialName.C_Str());
     }
   }
 
-  TextureInfo result = loadMaterialTexture(
-      scene, mesh, modelDirectory, texturesDirectory, aiTextureType_DIFFUSE);
-  if (result.id == 0) {
-    result = loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
-                                 aiTextureType_BASE_COLOR);
-  }
-  if (result.id == 0) {
-    result = loadTextureByBaseName(baseName, texturesDirectory);
-  }
+  return "";
+}
 
-  if (result.id == 0) {
-    const char* fallbackNames[] = {"texture", "albedo", "diffuse", "basecolor",
-                                   "base_color"};
-    for (const char* name : fallbackNames) {
-      result = loadTextureByBaseName(name, texturesDirectory);
+static TextureInfo
+loadDiffuseTexture(const aiScene *scene, aiMesh *mesh,
+                   const std::string & /* modelDirectory */,
+                   const std::string &texturesDirectory,
+                   const std::map<std::string, std::string> &textureMapping) {
+  std::string materialName = getMaterialName(scene, mesh);
+  TextureInfo result;
+
+  // Try JSON texture mapping
+  if (!textureMapping.empty() && !materialName.empty()) {
+    auto it = textureMapping.find(materialName);
+    if (it != textureMapping.end()) {
+      result = loadTextureByBaseName(it->second, texturesDirectory);
       if (result.id != 0) {
-        break;
+        return result;
+      } else {
+        // Mapping exists but texture file not found
+        std::cout << "Warning: Material '" << materialName
+                  << "' mapped to texture '" << it->second
+                  << "' but file not found in " << texturesDirectory
+                  << std::endl;
       }
+    } else {
+      // Material name not found in mapping
+      std::cout << "Missing mapping for material: '" << materialName
+                << "' (add to texture_mapping.json)" << std::endl;
     }
+  } else if (!materialName.empty() && textureMapping.empty()) {
+    // Material exists but no JSON file found
+    std::cout << "Material '" << materialName
+              << "' found but no texture_mapping.json file exists" << std::endl;
   }
 
-  if (result.id == 0) {
-    result.id = getDefaultWhiteTexture();
-  }
+  // Fallback to default white texture if JSON mapping fails
+  result.id = getDefaultWhiteTexture();
+
   return result;
 }
 
-static unsigned int loadNormalTexture(const aiScene* scene, aiMesh* mesh,
-                                      const std::string& modelDirectory,
-                                      const std::string& texturesDirectory,
-                                      const std::string& diffusePath) {
+static unsigned int loadNormalTexture(const aiScene *scene, aiMesh *mesh,
+                                      const std::string &modelDirectory,
+                                      const std::string &texturesDirectory,
+                                      const std::string &diffusePath) {
   TextureInfo result = loadMaterialTexture(
       scene, mesh, modelDirectory, texturesDirectory, aiTextureType_NORMALS);
   if (result.id == 0) {
@@ -397,15 +499,18 @@ static unsigned int loadNormalTexture(const aiScene* scene, aiMesh* mesh,
   return getDefaultNormalTexture();
 }
 
-Model::Model(const char* path) { Load(path); }
+Model::Model(const char *path) { Load(path); }
 
 void Model::Shutdown() {
   unsigned int defaultDiffuse = getDefaultWhiteTexture();
   unsigned int defaultNormal = getDefaultNormalTexture();
-  for (ModelMesh& mesh : meshes) {
-    if (mesh.vao) glDeleteVertexArrays(1, &mesh.vao);
-    if (mesh.vbo) glDeleteBuffers(1, &mesh.vbo);
-    if (mesh.ebo) glDeleteBuffers(1, &mesh.ebo);
+  for (ModelMesh &mesh : meshes) {
+    if (mesh.vao)
+      glDeleteVertexArrays(1, &mesh.vao);
+    if (mesh.vbo)
+      glDeleteBuffers(1, &mesh.vbo);
+    if (mesh.ebo)
+      glDeleteBuffers(1, &mesh.ebo);
     if (mesh.texture && mesh.texture != defaultDiffuse)
       glDeleteTextures(1, &mesh.texture);
     if (mesh.normalMap && mesh.normalMap != defaultNormal)
@@ -416,12 +521,12 @@ void Model::Shutdown() {
   boundingRadius = 0.0f;
 }
 
-void Model::Load(const char* path) {
+void Model::Load(const char *path) {
   ModelRenderSettings settings;
   Load(path, settings);
 }
 
-void Model::Load(const char* path, const ModelRenderSettings& settings) {
+void Model::Load(const char *path, const ModelRenderSettings &settings) {
   Shutdown();
 
   if (path) {
@@ -441,7 +546,7 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
   if (settings.flipUv) {
     flags |= aiProcess_FlipUVs;
   }
-  const aiScene* scene = importer.ReadFile(modelPath, flags);
+  const aiScene *scene = importer.ReadFile(modelPath, flags);
   if (!scene || !scene->mRootNode || scene->mNumMeshes == 0) {
     std::cout << "Model loading failed" << std::endl;
     return;
@@ -451,11 +556,17 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
   std::string texturesDirectory =
       joinPath(getDirectory(modelDirectory), "textures");
 
+  // Load texture mapping from JSON file
+  std::string modelRootDirectory = getDirectory(modelDirectory);
+  std::map<std::string, std::string> textureMapping =
+      loadTextureMapping(modelRootDirectory);
+
   meshes.reserve(scene->mNumMeshes);
   float maxRadiusSq = 0.0f;
   for (unsigned int meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex) {
-    aiMesh* mesh = scene->mMeshes[meshIndex];
-    if (!mesh) continue;
+    aiMesh *mesh = scene->mMeshes[meshIndex];
+    if (!mesh)
+      continue;
 
     int uvChannel = chooseUvChannel(scene, mesh);
 
@@ -502,8 +613,8 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
       }
     }
 
-    TextureInfo diffuse =
-        loadDiffuseTexture(scene, mesh, modelDirectory, texturesDirectory);
+    TextureInfo diffuse = loadDiffuseTexture(scene, mesh, modelDirectory,
+                                             texturesDirectory, textureMapping);
     unsigned int normalMap = loadNormalTexture(scene, mesh, modelDirectory,
                                                texturesDirectory, diffuse.path);
 
@@ -524,16 +635,16 @@ void Model::Load(const char* path, const ModelRenderSettings& settings) {
                  indices.data(), GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
-                          (void*)0);
+                          (void *)0);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
-                          (void*)(3 * sizeof(float)));
+                          (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
-                          (void*)(6 * sizeof(float)));
+                          (void *)(6 * sizeof(float)));
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(float),
-                          (void*)(8 * sizeof(float)));
+                          (void *)(8 * sizeof(float)));
     glEnableVertexAttribArray(3);
     glBindVertexArray(0);
 

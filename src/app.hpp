@@ -109,6 +109,16 @@ struct AppState {
   int churchInstanceIndex = -1;
   int deadtreeAssetIndex = -1;
   int deadtreeInstanceIndex = -1;
+  int metalBarrelAssetIndex = -1;
+  int metalBarrelInstanceIndex = -1;
+  int whiteVanAssetIndex = -1;
+  int whiteVanInstanceIndex = -1;
+  int handRadioAssetIndex = -1;
+  int handRadioInstanceIndex = -1;
+  int deadmanAssetIndex = -1;
+  int deadmanInstanceIndex = -1;
+  int deadBodyPlasticbagAssetIndex = -1;
+  int deadBodyPlasticbagInstanceIndex = -1;
 
   // MODEL SCALES
   float walterScale = 0.001f;
@@ -118,6 +128,11 @@ struct AppState {
   float churchScale = 0.1f;
   float deadtreeScale = 0.01f;
   float flashlightScale = 0.007f;
+  float metalBarrelScale = 1.0f;
+  float whiteVanScale = 1.0f;
+  float handRadioScale = 1.0f;
+  float deadmanScale = 1.0f;
+  float deadBodyPlasticbagScale = 1.0f;
 
   // OPENGL
   unsigned int VBO = 0;

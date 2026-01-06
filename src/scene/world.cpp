@@ -17,8 +17,10 @@ static int heightmapHeight = 0;
 static std::vector<unsigned short> heightmapData;
 
 static float clampFloat(float value, float minValue, float maxValue) {
-  if (value < minValue) return minValue;
-  if (value > maxValue) return maxValue;
+  if (value < minValue)
+    return minValue;
+  if (value > maxValue)
+    return maxValue;
   return value;
 }
 
@@ -32,10 +34,10 @@ static float hashToUnitFloat(int x, int z, int seed) {
   return (h & 0x00FFFFFF) / 16777216.0f;
 }
 
-static int addModelAsset(AppState& state, const char* id, const char* path,
-                         const ModelRenderSettings& settings, bool freeArea) {
+static int addModelAsset(AppState &state, const char *id, const char *path,
+                         const ModelRenderSettings &settings, bool freeArea) {
   state.modelAssets.emplace_back();
-  ModelAsset& asset = state.modelAssets.back();
+  ModelAsset &asset = state.modelAssets.back();
   if (id) {
     asset.id = id;
   }
@@ -50,8 +52,8 @@ static int addModelAsset(AppState& state, const char* id, const char* path,
   return static_cast<int>(state.modelAssets.size()) - 1;
 }
 
-int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
-                     const glm::vec3& rotation, const glm::vec3& scale,
+int addModelInstance(AppState &state, int assetIndex, const glm::vec3 &position,
+                     const glm::vec3 &rotation, const glm::vec3 &scale,
                      bool isEditorPlaced) {
   if (assetIndex < 0 ||
       assetIndex >= static_cast<int>(state.modelAssets.size())) {
@@ -64,20 +66,20 @@ int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
   instance.rotation = rotation;
   instance.scale = scale;
   instance.isEditorPlaced = isEditorPlaced;
-  const ModelAsset& asset = state.modelAssets[assetIndex];
+  const ModelAsset &asset = state.modelAssets[assetIndex];
   instance.freeArea = asset.freeArea;
   instance.freeAreaRadius = asset.freeArea ? state.treeFreeAreaRadius : 0.0f;
   state.modelInstances.push_back(instance);
   return static_cast<int>(state.modelInstances.size()) - 1;
 }
 
-static int findInstanceIndexByAsset(const AppState& state, int assetIndex,
+static int findInstanceIndexByAsset(const AppState &state, int assetIndex,
                                     bool requireNonEditor) {
   if (assetIndex < 0) {
     return -1;
   }
   for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0; --i) {
-    const ModelInstance& instance = state.modelInstances[i];
+    const ModelInstance &instance = state.modelInstances[i];
     if (instance.assetIndex == assetIndex &&
         (!requireNonEditor || !instance.isEditorPlaced)) {
       return i;
@@ -86,17 +88,19 @@ static int findInstanceIndexByAsset(const AppState& state, int assetIndex,
   return -1;
 }
 
-static void scatterTrees(AppState& state, int assetIndex) {
+static void scatterTrees(AppState &state, int assetIndex) {
   if (assetIndex < 0) {
     return;
   }
 
   const float cellSize = state.cubeScale * 8.0f;
   float density = state.treeDensity;
-  if (density < 0.0f) density = 0.0f;
-  if (density > 8.0f) density = 8.0f;
+  if (density < 0.0f)
+    density = 0.0f;
+  if (density > 8.0f)
+    density = 8.0f;
   const float baseScale = 0.004f;
-  const float scaleJitter = 0.35f;  // different tree sizes
+  const float scaleJitter = 0.35f; // different tree sizes
   const float jitterScale = 1.0f;  // keep offsets inside each cell
 
   int gridSize = state.floorSize * 2;
@@ -120,11 +124,12 @@ static void scatterTrees(AppState& state, int assetIndex) {
   // Spatial grid for fast neighbor checks (bucketed by minDistance).
   int spacingCellsX = static_cast<int>(std::ceil(span / minDistance));
   int spacingCellsZ = static_cast<int>(std::ceil(span / minDistance));
-  if (spacingCellsX < 1) spacingCellsX = 1;
-  if (spacingCellsZ < 1) spacingCellsZ = 1;
-  std::vector<std::vector<int>> spacingGrid(
-      static_cast<size_t>(spacingCellsX) *
-      static_cast<size_t>(spacingCellsZ));
+  if (spacingCellsX < 1)
+    spacingCellsX = 1;
+  if (spacingCellsZ < 1)
+    spacingCellsZ = 1;
+  std::vector<std::vector<int>> spacingGrid(static_cast<size_t>(spacingCellsX) *
+                                            static_cast<size_t>(spacingCellsZ));
   std::vector<glm::vec3> placedPositions;
   placedPositions.reserve(static_cast<size_t>(cellsX * cellsZ));
 
@@ -135,7 +140,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
   std::vector<TreeFreeZone> freeZones;
   freeZones.reserve(state.modelInstances.size());
 
-  for (const ModelInstance& instance : state.modelInstances) {
+  for (const ModelInstance &instance : state.modelInstances) {
     if (!instance.freeArea) {
       continue;
     }
@@ -150,12 +155,12 @@ static void scatterTrees(AppState& state, int assetIndex) {
     if (radius <= 0.0f) {
       continue;
     }
-    freeZones.push_back({glm::vec2(instance.position.x, instance.position.z),
-                         radius});
+    freeZones.push_back(
+        {glm::vec2(instance.position.x, instance.position.z), radius});
   }
 
   // Map a world position to a spacing grid cell.
-  auto getSpacingCell = [&](float xPos, float zPos, int& gx, int& gz) {
+  auto getSpacingCell = [&](float xPos, float zPos, int &gx, int &gz) {
     gx = static_cast<int>(std::floor((xPos - start) / minDistance));
     gz = static_cast<int>(std::floor((zPos - start) / minDistance));
     if (gx < 0 || gz < 0 || gx >= spacingCellsX || gz >= spacingCellsZ) {
@@ -177,12 +182,12 @@ static void scatterTrees(AppState& state, int assetIndex) {
     int maxZ = std::min(spacingCellsZ - 1, gz + 1);
     for (int nz = minZ; nz <= maxZ; ++nz) {
       for (int nx = minX; nx <= maxX; ++nx) {
-        const std::vector<int>& bucket =
+        const std::vector<int> &bucket =
             spacingGrid[static_cast<size_t>(nz) *
                             static_cast<size_t>(spacingCellsX) +
                         static_cast<size_t>(nx)];
         for (int index : bucket) {
-          const glm::vec3& other = placedPositions[index];
+          const glm::vec3 &other = placedPositions[index];
           float dx = other.x - xPos;
           float dz = other.z - zPos;
           if ((dx * dx + dz * dz) < minDistanceSq) {
@@ -191,7 +196,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
         }
       }
     }
-    for (const TreeFreeZone& zone : freeZones) {
+    for (const TreeFreeZone &zone : freeZones) {
       float dx = zone.center.x - xPos;
       float dz = zone.center.y - zPos;
       if ((dx * dx + dz * dz) < zone.radius * zone.radius) {
@@ -283,7 +288,7 @@ static void scatterTrees(AppState& state, int assetIndex) {
   (void)spawned;
 }
 
-static void resolveTreeCollisions(AppState& state) {
+static void resolveTreeCollisions(AppState &state) {
   if (state.treeCollisionPositions.empty()) {
     return;
   }
@@ -293,7 +298,7 @@ static void resolveTreeCollisions(AppState& state) {
   float combinedRadius = treeRadius + playerRadius;
   float combinedRadiusSq = combinedRadius * combinedRadius;
 
-  for (const glm::vec3& treePos : state.treeCollisionPositions) {
+  for (const glm::vec3 &treePos : state.treeCollisionPositions) {
     float dx = state.camera.cameraPos.x - treePos.x;
     float dz = state.camera.cameraPos.z - treePos.z;
     float distSq = dx * dx + dz * dz;
@@ -327,7 +332,7 @@ static bool loadHeightmap() {
   }
 
   int channels = 0;
-  unsigned short* data =
+  unsigned short *data =
       stbi_load_16("assets/heightmap_16bit.png", &heightmapWidth,
                    &heightmapHeight, &channels, 1);
   if (!data) {
@@ -357,8 +362,10 @@ static float sampleHeightNormalized(float u, float v) {
   int y0 = static_cast<int>(std::floor(y));
   int x1 = x0 + 1;
   int y1 = y0 + 1;
-  if (x1 >= heightmapWidth) x1 = heightmapWidth - 1;
-  if (y1 >= heightmapHeight) y1 = heightmapHeight - 1;
+  if (x1 >= heightmapWidth)
+    x1 = heightmapWidth - 1;
+  if (y1 >= heightmapHeight)
+    y1 = heightmapHeight - 1;
   float tx = x - static_cast<float>(x0);
   float ty = y - static_cast<float>(y0);
 
@@ -377,7 +384,7 @@ static float sampleHeightNormalized(float u, float v) {
   return h0 + (h1 - h0) * ty;
 }
 
-float getTerrainHeightAt(const AppState& state, float worldX, float worldZ) {
+float getTerrainHeightAt(const AppState &state, float worldX, float worldZ) {
   int gridSize = state.floorSize * 2;
   float tileSize = state.cubeScale;
   float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;
@@ -396,7 +403,7 @@ float getTerrainHeightAt(const AppState& state, float worldX, float worldZ) {
   return baseHeight + (heightValue * state.heightmapScale);
 }
 
-void buildFloor(AppState& state) {
+void buildFloor(AppState &state) {
   float resolutionScale = state.terrainResolutionScale;
   if (resolutionScale < 0.1f) {
     resolutionScale = 0.1f;
@@ -495,12 +502,13 @@ void buildFloor(AppState& state) {
   }
 }
 
-void buildGrass(AppState& state) {
+void buildGrass(AppState &state) {
   int gridSize = state.floorSize * 2;
   float tileSize = state.cubeScale;
   float start = (-static_cast<float>(state.floorSize) - 0.5f) * tileSize;
   float density = state.grassDensity;
-  if (density < 0.0f) density = 0.0f;
+  if (density < 0.0f)
+    density = 0.0f;
 
   state.grassInstances.clear();
 
@@ -509,7 +517,8 @@ void buildGrass(AppState& state) {
   }
 
   float radius = state.grassRenderRadius;
-  if (radius < 0.0f) radius = 0.0f;
+  if (radius < 0.0f)
+    radius = 0.0f;
 
   if (radius <= 0.0f) {
     return;
@@ -528,10 +537,14 @@ void buildGrass(AppState& state) {
   int minZ = static_cast<int>(std::floor(minZf));
   int maxZ = static_cast<int>(std::floor(maxZf));
 
-  if (minX < 0) minX = 0;
-  if (minZ < 0) minZ = 0;
-  if (maxX > gridSize - 1) maxX = gridSize - 1;
-  if (maxZ > gridSize - 1) maxZ = gridSize - 1;
+  if (minX < 0)
+    minX = 0;
+  if (minZ < 0)
+    minZ = 0;
+  if (maxX > gridSize - 1)
+    maxX = gridSize - 1;
+  if (maxZ > gridSize - 1)
+    maxZ = gridSize - 1;
 
   if (minX > maxX || minZ > maxZ) {
     return;
@@ -589,8 +602,9 @@ void buildGrass(AppState& state) {
   }
 }
 
-void updateGroundCollision(AppState& state) {
-  if (state.freeCam) return;
+void updateGroundCollision(AppState &state) {
+  if (state.freeCam)
+    return;
 
   bool wasGrounded = state.camera.isGrounded;
 
@@ -629,7 +643,7 @@ void updateGroundCollision(AppState& state) {
   state.camera.isGrounded = false;
 }
 
-void initWorldModels(AppState& state) {
+void initWorldModels(AppState &state) {
   state.modelAssets.clear();
   state.modelInstances.clear();
 
@@ -650,9 +664,19 @@ void initWorldModels(AppState& state) {
   state.churchInstanceIndex = -1;
   state.deadtreeAssetIndex = -1;
   state.deadtreeInstanceIndex = -1;
+  state.metalBarrelAssetIndex = -1;
+  state.metalBarrelInstanceIndex = -1;
+  state.whiteVanAssetIndex = -1;
+  state.whiteVanInstanceIndex = -1;
+  state.handRadioAssetIndex = -1;
+  state.handRadioInstanceIndex = -1;
+  state.deadmanAssetIndex = -1;
+  state.deadmanInstanceIndex = -1;
+  state.deadBodyPlasticbagAssetIndex = -1;
+  state.deadBodyPlasticbagInstanceIndex = -1;
 
   int templateCount = 0;
-  const ModelTemplate* templates = GetModelTemplates(&templateCount);
+  const ModelTemplate *templates = GetModelTemplates(&templateCount);
 
   // Check if model loads temporarily/ local
   int treeAsset = -1;
@@ -660,9 +684,14 @@ void initWorldModels(AppState& state) {
   int churchAsset = -1;
   int flashlightAsset = -1;
   int deadtreeAsset = -1;
+  int metalBarrelAsset = -1;
+  int whiteVanAsset = -1;
+  int handRadioAsset = -1;
+  int deadmanAsset = -1;
+  int deadBodyPlasticbagAsset = -1;
 
   for (int i = 0; i < templateCount; ++i) {
-    const ModelTemplate& entry = templates[i];
+    const ModelTemplate &entry = templates[i];
     int assetIndex = addModelAsset(state, entry.id, entry.path,
                                    entry.renderSettings, entry.freeArea);
 
@@ -677,6 +706,16 @@ void initWorldModels(AppState& state) {
       flashlightAsset = assetIndex;
     } else if (entry.id && std::strcmp(entry.id, "Dead_Tree") == 0) {
       deadtreeAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "metal_barrel") == 0) {
+      metalBarrelAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "white_van") == 0) {
+      whiteVanAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "hand_radio") == 0) {
+      handRadioAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "deadman") == 0) {
+      deadmanAsset = assetIndex;
+    } else if (entry.id && std::strcmp(entry.id, "dead_body_plasticbag") == 0) {
+      deadBodyPlasticbagAsset = assetIndex;
     }
   }
 
@@ -687,6 +726,11 @@ void initWorldModels(AppState& state) {
   state.flashlightAssetIndex = flashlightAsset;
   state.churchAssetIndex = churchAsset;
   state.deadtreeAssetIndex = deadtreeAsset;
+  state.metalBarrelAssetIndex = metalBarrelAsset;
+  state.whiteVanAssetIndex = whiteVanAsset;
+  state.handRadioAssetIndex = handRadioAsset;
+  state.deadmanAssetIndex = deadmanAsset;
+  state.deadBodyPlasticbagAssetIndex = deadBodyPlasticbagAsset;
   scatterTrees(state, treeAsset);
 
   // PLACE MODELS IN WORLD
@@ -725,7 +769,7 @@ void initWorldModels(AppState& state) {
   // }
 }
 
-void rebuildWorldTrees(AppState& state) {
+void rebuildWorldTrees(AppState &state) {
   if (state.treeAssetIndex < 0) {
     return;
   }
@@ -735,8 +779,8 @@ void rebuildWorldTrees(AppState& state) {
   int removedBefore = 0;
   if (selectedIndex >= 0 &&
       selectedIndex < static_cast<int>(state.modelInstances.size())) {
-    selectedWasTree = state.modelInstances[selectedIndex].assetIndex ==
-                      state.treeAssetIndex;
+    selectedWasTree =
+        state.modelInstances[selectedIndex].assetIndex == state.treeAssetIndex;
     for (int i = 0; i < selectedIndex; ++i) {
       if (state.modelInstances[i].assetIndex == state.treeAssetIndex) {
         removedBefore++;
@@ -746,7 +790,7 @@ void rebuildWorldTrees(AppState& state) {
 
   state.modelInstances.erase(
       std::remove_if(state.modelInstances.begin(), state.modelInstances.end(),
-                     [&](const ModelInstance& instance) {
+                     [&](const ModelInstance &instance) {
                        return instance.assetIndex == state.treeAssetIndex;
                      }),
       state.modelInstances.end());
@@ -763,12 +807,12 @@ void rebuildWorldTrees(AppState& state) {
   scatterTrees(state, state.treeAssetIndex);
 }
 
-void updateWorldModelHeights(AppState& state) {
+void updateWorldModelHeights(AppState &state) {
   if (state.treeAssetIndex < 0) {
     return;
   }
 
-  for (ModelInstance& instance : state.modelInstances) {
+  for (ModelInstance &instance : state.modelInstances) {
     if (instance.assetIndex != state.treeAssetIndex) {
       continue;
     }
@@ -778,7 +822,7 @@ void updateWorldModelHeights(AppState& state) {
   }
 }
 
-void updateFlashlightAttachment(AppState& state) {
+void updateFlashlightAttachment(AppState &state) {
   if (state.flashlightAssetIndex < 0) {
     return;
   }
@@ -798,7 +842,7 @@ void updateFlashlightAttachment(AppState& state) {
     return;
   }
 
-  ModelInstance& instance = state.modelInstances[instanceIndex];
+  ModelInstance &instance = state.modelInstances[instanceIndex];
 
   glm::vec3 forward = glm::normalize(state.camera.cameraFront);
   glm::vec3 right = glm::cross(forward, state.camera.cameraUp);

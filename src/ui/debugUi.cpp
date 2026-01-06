@@ -10,7 +10,7 @@
 #include "imgui_impl_opengl3.h"
 #include "scene/world.hpp"
 
-bool initDebugUi(GLFWwindow* window) {
+bool initDebugUi(GLFWwindow *window) {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGui::StyleColorsDark();
@@ -25,8 +25,8 @@ void beginUiFrame() {
   ImGui::NewFrame();
 }
 
-void drawDebugUi(AppState& state) {
-  ImGuiIO& io = ImGui::GetIO();
+void drawDebugUi(AppState &state) {
+  ImGuiIO &io = ImGui::GetIO();
 
   ImGui::Begin("Info");
   ImGui::Text("FPS: %.f", io.Framerate);
@@ -90,7 +90,7 @@ void drawDebugUi(AppState& state) {
   if (state.treeAssetIndex >= 0) {
     float treeScale = 0.0f;
     bool foundTree = false;
-    for (const ModelInstance& instance : state.modelInstances) {
+    for (const ModelInstance &instance : state.modelInstances) {
       if (instance.assetIndex == state.treeAssetIndex) {
         treeScale = instance.scale.x;
         foundTree = true;
@@ -99,7 +99,7 @@ void drawDebugUi(AppState& state) {
     }
     if (foundTree) {
       if (ImGui::SliderFloat("Tree Scale", &treeScale, 0.001f, 0.010f)) {
-        for (ModelInstance& instance : state.modelInstances) {
+        for (ModelInstance &instance : state.modelInstances) {
           if (instance.assetIndex == state.treeAssetIndex) {
             instance.scale = glm::vec3(treeScale);
           }
@@ -111,7 +111,7 @@ void drawDebugUi(AppState& state) {
   if (state.walterAssetIndex >= 0) {
     float walterScale = 0.0f;
     bool foundWalter = false;
-    for (const ModelInstance& instance : state.modelInstances) {
+    for (const ModelInstance &instance : state.modelInstances) {
       if (instance.assetIndex == state.walterAssetIndex) {
         walterScale = instance.scale.x;
         foundWalter = true;
@@ -120,7 +120,7 @@ void drawDebugUi(AppState& state) {
     }
     if (foundWalter) {
       if (ImGui::SliderFloat("Walter Scale", &walterScale, 0.0001f, 0.1f)) {
-        for (ModelInstance& instance : state.modelInstances) {
+        for (ModelInstance &instance : state.modelInstances) {
           if (instance.assetIndex == state.walterAssetIndex) {
             instance.scale = glm::vec3(walterScale);
           }
@@ -130,7 +130,7 @@ void drawDebugUi(AppState& state) {
   }
   if (state.treeAssetIndex >= 0 &&
       state.treeAssetIndex < static_cast<int>(state.modelAssets.size())) {
-    ModelRenderSettings& treeSettings =
+    ModelRenderSettings &treeSettings =
         state.modelAssets[state.treeAssetIndex].renderSettings;
     ImGui::SliderFloat("Tree Intensity", &treeSettings.albedoIntensity, 0.0f,
                        2.0f);
@@ -150,7 +150,7 @@ void drawDebugUi(AppState& state) {
   ImGui::End();
 }
 
-void drawMapEditorUi(AppState& state) {
+void drawMapEditorUi(AppState &state) {
   ImGui::Begin("Models");
 
   if (ImGui::BeginTable("ModelSpawnTable", 2,
@@ -161,8 +161,8 @@ void drawMapEditorUi(AppState& state) {
     ImGui::TableHeadersRow();
 
     // lambda to get models
-    auto spawnRow = [&](const char* label, int assetIndex,
-                        const glm::vec3& scale) {
+    auto spawnRow = [&](const char *label, int assetIndex,
+                        const glm::vec3 &scale) {
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
       ImGui::TextUnformatted(label);
@@ -187,13 +187,22 @@ void drawMapEditorUi(AppState& state) {
              glm::vec3(state.flashlightScale));
     spawnRow("Dead Tree", state.deadtreeAssetIndex,
              glm::vec3(state.deadtreeScale));
+    spawnRow("Metal Barrel", state.metalBarrelAssetIndex,
+             glm::vec3(state.metalBarrelScale));
+    spawnRow("White Van", state.whiteVanAssetIndex,
+             glm::vec3(state.whiteVanScale));
+    spawnRow("Hand Radio", state.handRadioAssetIndex,
+             glm::vec3(state.handRadioScale));
+    spawnRow("Deadman", state.deadmanAssetIndex, glm::vec3(state.deadmanScale));
+    spawnRow("Dead Body Plasticbag", state.deadBodyPlasticbagAssetIndex,
+             glm::vec3(state.deadBodyPlasticbagScale));
 
     ImGui::EndTable();
   }
 
   if (state.selectedInstance >= 0 &&
       state.selectedInstance < static_cast<int>(state.modelInstances.size())) {
-    ModelInstance& instance = state.modelInstances[state.selectedInstance];
+    ModelInstance &instance = state.modelInstances[state.selectedInstance];
     ImGui::Separator();
     ImGui::Text("Tree Free Area");
     bool hasFreeArea = instance.freeArea;
@@ -220,7 +229,7 @@ void drawMapEditorUi(AppState& state) {
     bool removedTree = false;
     for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
          --i) {
-      const ModelInstance& instance = state.modelInstances[i];
+      const ModelInstance &instance = state.modelInstances[i];
       if (!instance.isEditorPlaced) {
         continue;
       }
@@ -238,7 +247,7 @@ void drawMapEditorUi(AppState& state) {
     // We check for editor-placed trees before removing, so we know whether to
     // rebuild the instanced tree buffer after the clear.
     bool hasEditorTree = false;
-    for (const ModelInstance& instance : state.modelInstances) {
+    for (const ModelInstance &instance : state.modelInstances) {
       if (instance.isEditorPlaced &&
           instance.assetIndex == state.treeAssetIndex) {
         hasEditorTree = true;
@@ -247,7 +256,7 @@ void drawMapEditorUi(AppState& state) {
     }
     auto newEnd = std::remove_if(
         state.modelInstances.begin(), state.modelInstances.end(),
-        [](const ModelInstance& instance) { return instance.isEditorPlaced; });
+        [](const ModelInstance &instance) { return instance.isEditorPlaced; });
     // Erase the tail that remove_if() moved to the end.
     state.modelInstances.erase(newEnd, state.modelInstances.end());
     if (hasEditorTree) {

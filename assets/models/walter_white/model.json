@@ -1,0 +1,9 @@
+{
+  "textureMapping": {
+    "Material": "texture",
+    "Material.001": "texture",
+    "Material.002": "texture",
+    "Material.003": "texture"
+  },
+  "scale": 1.0
+}

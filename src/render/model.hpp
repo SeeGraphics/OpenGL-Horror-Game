@@ -2,6 +2,7 @@
 #define MODEL_HPP
 
 #include <glm/glm.hpp>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -16,25 +17,33 @@ struct ModelMesh {
   int indexCount = 0;
 };
 
-class Model {
- public:
-  Model() = default;
-  explicit Model(const char* path);
+// json structure, map for texture mapping and model scale
+struct ModelConfig {
+  std::map<std::string, std::string> textureMapping;
+  float scale = 1.0f;
+};
 
-  void Load(const char* path);
-  void Load(const char* path, const ModelRenderSettings& settings);
+class Model {
+public:
+  Model() = default;
+  explicit Model(const char *path);
+
+  void Load(const char *path);
+  void Load(const char *path, const ModelRenderSettings &settings);
   void Shutdown();
 
-  const std::string& GetPath() const { return modelPath; }
+  const std::string &GetPath() const { return modelPath; }
   bool IsLoaded() const { return isLoaded; }
-  const std::vector<ModelMesh>& GetMeshes() const { return meshes; }
+  const std::vector<ModelMesh> &GetMeshes() const { return meshes; }
   float GetBoundingRadius() const { return boundingRadius; }
+  float GetBaseScale() const { return baseScale; }
 
- private:
+private:
   std::string modelPath;
   bool isLoaded = false;
   std::vector<ModelMesh> meshes;
   float boundingRadius = 0.0f;
+  float baseScale = 1.0f;
 };
 
 struct ModelRenderSettings {
@@ -66,12 +75,17 @@ struct ModelInstance {
 };
 
 struct ModelTemplate {
-  const char* id = nullptr;
-  const char* path = nullptr;
+  const char *id = nullptr;
+  const char *path = nullptr;
   ModelRenderSettings renderSettings;
   bool freeArea = false;
 };
 
-const ModelTemplate* GetModelTemplates(int* count);
+const ModelTemplate *GetModelTemplates(int *count);
+
+// Load and save model configuration from/to model.json
+ModelConfig loadModelConfig(const std::string &modelDirectory);
+bool saveModelConfig(const std::string &modelDirectory,
+                     const ModelConfig &config);
 
 #endif

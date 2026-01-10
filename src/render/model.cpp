@@ -321,25 +321,63 @@ static TextureInfo loadTextureByBaseName(const std::string &baseName,
   return result;
 }
 
-static std::map<std::string, std::string>
-loadTextureMapping(const std::string &modelDirectory) {
-  std::map<std::string, std::string> mapping;
-  std::string jsonPath = joinPath(modelDirectory, "texture_mapping.json");
+ModelConfig loadModelConfig(const std::string &modelDirectory) {
+  ModelConfig config;
+  std::string jsonPath = joinPath(modelDirectory, "model.json");
   std::ifstream file(jsonPath);
   if (!file.is_open()) {
-    return mapping;
+    return config;
   }
 
   try {
     json j = json::parse(file);
-    for (auto &[key, value] : j.items()) {
-      mapping[key] = value.get<std::string>();
+
+    // Parse textureMapping nested object
+    if (j.contains("textureMapping") && j["textureMapping"].is_object()) {
+      for (auto &[key, value] : j["textureMapping"].items()) {
+        config.textureMapping[key] = value.get<std::string>();
+      }
+    }
+
+    // Parse scale value (optional, defaults to 1.0)
+    if (j.contains("scale") && j["scale"].is_number()) {
+      config.scale = j["scale"].get<float>();
     }
   } catch (const json::exception &e) {
-    // JSON parse error - return empty mapping
+    std::cout << "JSON parse error in " << jsonPath << ": " << e.what()
+              << std::endl;
   }
 
-  return mapping;
+  return config;
+}
+
+bool saveModelConfig(const std::string &modelDirectory,
+                     const ModelConfig &config) {
+  std::string jsonPath = joinPath(modelDirectory, "model.json");
+  std::ofstream file(jsonPath);
+  if (!file.is_open()) {
+    std::cout << "Failed to open " << jsonPath << " for writing" << std::endl;
+    return false;
+  }
+
+  try {
+    json j;
+    // Save textureMapping nested object
+    j["textureMapping"] = json::object();
+    for (const auto &[key, value] : config.textureMapping) {
+      j["textureMapping"][key] = value;
+    }
+    // Save scale value
+    j["scale"] = config.scale;
+
+    // Write with pretty formatting (2 space indent)
+    file << j.dump(2) << std::endl;
+    return true;
+  } catch (const json::exception &e) {
+    std::cout << "JSON write error in " << jsonPath << ": " << e.what()
+              << std::endl;
+    return false;
+  }
 }
 
 static TextureInfo loadMaterialTexture(const aiScene *scene, aiMesh *mesh,
@@ -448,12 +486,12 @@ loadDiffuseTexture(const aiScene *scene, aiMesh *mesh,
     } else {
       // Material name not found in mapping
       std::cout << "Missing mapping for material: '" << materialName
-                << "' (add to texture_mapping.json)" << std::endl;
+                << "' (add to model.json)" << std::endl;
     }
   } else if (!materialName.empty() && textureMapping.empty()) {
     // Material exists but no JSON file found
     std::cout << "Material '" << materialName
-              << "' found but no texture_mapping.json file exists" << std::endl;
+              << "' found but no model.json file exists" << std::endl;
   }
 
   // Fallback to default white texture if JSON mapping fails
@@ -519,6 +557,7 @@ void Model::Shutdown() {
   meshes.clear();
   isLoaded = false;
   boundingRadius = 0.0f;
+  baseScale = 1.0f;
 }
 
 void Model::Load(const char *path) {
@@ -556,10 +595,12 @@ void Model::Load(const char *path, const ModelRenderSettings &settings) {
   std::string texturesDirectory =
       joinPath(getDirectory(modelDirectory), "textures");
 
-  // Load texture mapping from JSON file
+  // Load model configuration from JSON file
   std::string modelRootDirectory = getDirectory(modelDirectory);
-  std::map<std::string, std::string> textureMapping =
-      loadTextureMapping(modelRootDirectory);
+  ModelConfig modelConfig = loadModelConfig(modelRootDirectory);
+  const std::map<std::string, std::string> &textureMapping =
+      modelConfig.textureMapping;
+  baseScale = modelConfig.scale;
 
   meshes.reserve(scene->mNumMeshes);
   float maxRadiusSq = 0.0f;
@@ -575,6 +616,10 @@ void Model::Load(const char *path, const ModelRenderSettings &settings) {
 
     for (unsigned int v = 0; v < mesh->mNumVertices; ++v) {
       aiVector3D pos = mesh->mVertices[v];
+      // Apply scale from model.json to vertex positions
+      pos.x *= baseScale;
+      pos.y *= baseScale;
+      pos.z *= baseScale;
       float radiusSq = (pos.x * pos.x) + (pos.y * pos.y) + (pos.z * pos.z);
       if (radiusSq > maxRadiusSq) {
         maxRadiusSq = radiusSq;

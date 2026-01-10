@@ -1,0 +1,7 @@
+{
+  "textureMapping": {
+    "WalkieTalkie1": "WalkieTalkieGray",
+    "WalkieTalkieScreen": "RadioLCD"
+  },
+  "scale": 1.0
+}

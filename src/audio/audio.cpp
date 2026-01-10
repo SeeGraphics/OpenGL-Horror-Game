@@ -2,13 +2,13 @@
 
 #include <iostream>
 
-static bool loadSound(AudioSystem& audio, const char* path, ma_sound& sound) {
+static bool loadSound(AudioSystem &audio, const char *path, ma_sound &sound) {
   ma_result result =
       ma_sound_init_from_file(&audio.engine, path, 0, NULL, NULL, &sound);
   return result == MA_SUCCESS;
 }
 
-bool initAudio(AudioSystem& audio) {
+bool initAudio(AudioSystem &audio) {
   if (audio.initialized) {
     return true;
   }
@@ -35,18 +35,22 @@ bool initAudio(AudioSystem& audio) {
                        MA_TRUE);
   ma_sound_set_looping(&audio.sounds[static_cast<int>(SoundId::StepOnGrass)],
                        MA_TRUE);
-  // ma_sound_set_looping(
-  //     &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], MA_TRUE);
+  ma_sound_set_looping(
+      &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], MA_TRUE);
   //  ma_sound_set_looping(
   //      &audio.sounds[static_cast<int>(SoundId::MysticalForestAmbient)],
   //      MA_TRUE);
+
+  // Set background music to a lower volume so other sounds are audible
+  ma_sound_set_volume(
+      &audio.sounds[static_cast<int>(SoundId::NightForestAmbient)], 0.25f);
 
   audio.initialized = true;
   ma_engine_set_volume(&audio.engine, audio.masterVolume);
   return true;
 }
 
-void shutdownAudio(AudioSystem& audio) {
+void shutdownAudio(AudioSystem &audio) {
   if (!audio.initialized) {
     return;
   }
@@ -58,7 +62,7 @@ void shutdownAudio(AudioSystem& audio) {
   audio.initialized = false;
 }
 
-void setMasterVolume(AudioSystem& audio, float volume) {
+void setMasterVolume(AudioSystem &audio, float volume) {
   if (volume < 0.0f) {
     volume = 0.0f;
   }
@@ -74,12 +78,27 @@ void setMasterVolume(AudioSystem& audio, float volume) {
   ma_engine_set_volume(&audio.engine, audio.masterVolume);
 }
 
-void playSound(AudioSystem& audio, SoundId soundId) {
+void setSoundVolume(AudioSystem &audio, SoundId soundId, float volume) {
+  if (volume < 0.0f) {
+    volume = 0.0f;
+  }
+  if (volume > 1.0f) {
+    volume = 1.0f;
+  }
+
   if (!audio.initialized) {
     return;
   }
 
-  ma_sound& sound = audio.sounds[static_cast<int>(soundId)];
+  ma_sound_set_volume(&audio.sounds[static_cast<int>(soundId)], volume);
+}
+
+void playSound(AudioSystem &audio, SoundId soundId) {
+  if (!audio.initialized) {
+    return;
+  }
+
+  ma_sound &sound = audio.sounds[static_cast<int>(soundId)];
   if (ma_sound_is_playing(&sound)) {
     ma_sound_stop(&sound);
   }
@@ -88,24 +107,24 @@ void playSound(AudioSystem& audio, SoundId soundId) {
   ma_sound_start(&sound);
 }
 
-void startLoopingSound(AudioSystem& audio, SoundId soundId) {
+void startLoopingSound(AudioSystem &audio, SoundId soundId) {
   if (!audio.initialized) {
     return;
   }
 
-  ma_sound& sound = audio.sounds[static_cast<int>(soundId)];
+  ma_sound &sound = audio.sounds[static_cast<int>(soundId)];
   if (!ma_sound_is_playing(&sound)) {
     ma_sound_seek_to_pcm_frame(&sound, 0);
     ma_sound_start(&sound);
   }
 }
 
-void stopSound(AudioSystem& audio, SoundId soundId) {
+void stopSound(AudioSystem &audio, SoundId soundId) {
   if (!audio.initialized) {
     return;
   }
 
-  ma_sound& sound = audio.sounds[static_cast<int>(soundId)];
+  ma_sound &sound = audio.sounds[static_cast<int>(soundId)];
   if (ma_sound_is_playing(&sound)) {
     ma_sound_stop(&sound);
   }

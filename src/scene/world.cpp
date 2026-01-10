@@ -333,7 +333,7 @@ static bool loadHeightmap() {
 
   int channels = 0;
   unsigned short *data =
-      stbi_load_16("assets/heightmap_16bit.png", &heightmapWidth,
+      stbi_load_16("assets/heightmaps/heightmap_16bit.png", &heightmapWidth,
                    &heightmapHeight, &channels, 1);
   if (!data) {
     std::cout << "Heightmap failed to load" << std::endl;
@@ -753,6 +753,7 @@ void initWorldModels(AppState &state) {
   // }
 
   // add flashlight
+  // Flashlight uses hardcoded scale, not from model.json
   if (flashlightAsset >= 0) {
     state.flashlightInstanceIndex = addModelInstance(
         state, flashlightAsset, state.camera.cameraPos, glm::vec3(0.0f),

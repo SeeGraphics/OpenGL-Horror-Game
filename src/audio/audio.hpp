@@ -8,7 +8,7 @@ enum class SoundId {
   RunningGrass,
   StepOnGrass,
   LandingOnGrass,
-  // NightForestAmbient,
+  NightForestAmbient,
   //  MysticalForestAmbient,
   Count
 };
@@ -16,11 +16,12 @@ enum class SoundId {
 inline constexpr int soundCount = static_cast<int>(SoundId::Count);
 
 struct AudioPaths {
-  const char* sounds[soundCount] = {
+  const char *sounds[soundCount] = {
       "assets/sounds/flashlightToggle.wav",
       "assets/sounds/running.wav",
       "assets/sounds/walking.wav",
       "assets/sounds/landing_on_grass.wav",
+      "assets/sounds/night_forest_ambient.mp3",
   };
 };
 
@@ -32,11 +33,12 @@ struct AudioSystem {
   float masterVolume = 0.03f;
 };
 
-bool initAudio(AudioSystem& audio);
-void shutdownAudio(AudioSystem& audio);
-void setMasterVolume(AudioSystem& audio, float volume);
-void playSound(AudioSystem& audio, SoundId soundId);
-void startLoopingSound(AudioSystem& audio, SoundId soundId);
-void stopSound(AudioSystem& audio, SoundId soundId);
+bool initAudio(AudioSystem &audio);
+void shutdownAudio(AudioSystem &audio);
+void setMasterVolume(AudioSystem &audio, float volume);
+void setSoundVolume(AudioSystem &audio, SoundId soundId, float volume);
+void playSound(AudioSystem &audio, SoundId soundId);
+void startLoopingSound(AudioSystem &audio, SoundId soundId);
+void stopSound(AudioSystem &audio, SoundId soundId);
 
 #endif

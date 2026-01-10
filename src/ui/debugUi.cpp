@@ -180,22 +180,32 @@ void drawMapEditorUi(AppState &state) {
       ImGui::EndDisabled();
     };
 
-    spawnRow("Tree", state.treeAssetIndex, glm::vec3(state.treeScale));
-    spawnRow("Walter", state.walterAssetIndex, glm::vec3(state.walterScale));
-    spawnRow("Church", state.churchAssetIndex, glm::vec3(state.churchScale));
+    auto getModelScale = [&](int assetIndex) -> glm::vec3 {
+      // Since scale is baked into geometry via baseScale from model.json,
+      // instances should use 1.0 by default
+      (void)assetIndex;  // Parameter unused but kept for consistency
+      return glm::vec3(1.0f);
+    };
+
+    spawnRow("Tree", state.treeAssetIndex, getModelScale(state.treeAssetIndex));
+    spawnRow("Walter", state.walterAssetIndex,
+             getModelScale(state.walterAssetIndex));
+    spawnRow("Church", state.churchAssetIndex,
+             getModelScale(state.churchAssetIndex));
     spawnRow("Flashlight", state.flashlightAssetIndex,
-             glm::vec3(state.flashlightScale));
+             getModelScale(state.flashlightAssetIndex));
     spawnRow("Dead Tree", state.deadtreeAssetIndex,
-             glm::vec3(state.deadtreeScale));
+             getModelScale(state.deadtreeAssetIndex));
     spawnRow("Metal Barrel", state.metalBarrelAssetIndex,
-             glm::vec3(state.metalBarrelScale));
+             getModelScale(state.metalBarrelAssetIndex));
     spawnRow("White Van", state.whiteVanAssetIndex,
-             glm::vec3(state.whiteVanScale));
+             getModelScale(state.whiteVanAssetIndex));
     spawnRow("Hand Radio", state.handRadioAssetIndex,
-             glm::vec3(state.handRadioScale));
-    spawnRow("Deadman", state.deadmanAssetIndex, glm::vec3(state.deadmanScale));
+             getModelScale(state.handRadioAssetIndex));
+    spawnRow("Deadman", state.deadmanAssetIndex,
+             getModelScale(state.deadmanAssetIndex));
     spawnRow("Dead Body Plasticbag", state.deadBodyPlasticbagAssetIndex,
-             glm::vec3(state.deadBodyPlasticbagScale));
+             getModelScale(state.deadBodyPlasticbagAssetIndex));
 
     ImGui::EndTable();
   }

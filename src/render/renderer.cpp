@@ -16,19 +16,19 @@
 #include "render/shader.hpp"
 #include "scene/world.hpp"
 
-static unsigned int loadCubemap(const std::vector<std::string>& faces);
-static void uploadTerrainBuffers(AppState& state);
-static void uploadGrassInstances(AppState& state);
-static void uploadTreeInstances(AppState& state);
-static void ensureRenderTarget(AppState& state, int framebufferWidth,
+static unsigned int loadCubemap(const std::vector<std::string> &faces);
+static void uploadTerrainBuffers(AppState &state);
+static void uploadGrassInstances(AppState &state);
+static void uploadTreeInstances(AppState &state);
+static void ensureRenderTarget(AppState &state, int framebufferWidth,
                                int framebufferHeight);
-static void buildCameraBasis(const AppState& state, glm::vec3& forward,
-                             glm::vec3& right, glm::vec3& up);
-static bool buildFlashlightModelMatrix(const AppState& state,
-                                       glm::mat4& modelMatrix);
+static void buildCameraBasis(const AppState &state, glm::vec3 &forward,
+                             glm::vec3 &right, glm::vec3 &up);
+static bool buildFlashlightModelMatrix(const AppState &state,
+                                       glm::mat4 &modelMatrix);
 
-static void buildCameraBasis(const AppState& state, glm::vec3& forward,
-                             glm::vec3& right, glm::vec3& up) {
+static void buildCameraBasis(const AppState &state, glm::vec3 &forward,
+                             glm::vec3 &right, glm::vec3 &up) {
   forward = glm::normalize(state.camera.cameraFront);
   right = glm::cross(forward, state.camera.cameraUp);
   if (glm::length(right) < 0.001f) {
@@ -38,8 +38,8 @@ static void buildCameraBasis(const AppState& state, glm::vec3& forward,
   up = glm::normalize(glm::cross(right, forward));
 }
 
-static bool buildFlashlightModelMatrix(const AppState& state,
-                                       glm::mat4& modelMatrix) {
+static bool buildFlashlightModelMatrix(const AppState &state,
+                                       glm::mat4 &modelMatrix) {
   if (state.flashlightAssetIndex < 0) {
     return false;
   }
@@ -53,7 +53,7 @@ static bool buildFlashlightModelMatrix(const AppState& state,
     instanceIndex = -1;
     for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
          --i) {
-      const ModelInstance& instance = state.modelInstances[i];
+      const ModelInstance &instance = state.modelInstances[i];
       if (instance.assetIndex == state.flashlightAssetIndex &&
           !instance.isEditorPlaced) {
         instanceIndex = i;
@@ -66,7 +66,7 @@ static bool buildFlashlightModelMatrix(const AppState& state,
     return false;
   }
 
-  const ModelInstance& instance = state.modelInstances[instanceIndex];
+  const ModelInstance &instance = state.modelInstances[instanceIndex];
 
   glm::vec3 forward;
   glm::vec3 right;
@@ -90,7 +90,7 @@ static bool buildFlashlightModelMatrix(const AppState& state,
   return true;
 }
 
-bool renderInit(AppState& state, GLFWwindow* window) {
+bool renderInit(AppState &state, GLFWwindow *window) {
   // glad: load all OpenGL function pointers
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
@@ -127,17 +127,17 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glBindVertexArray(state.VAO);
 
   // position attribute
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
 
   // normal attribute
   glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void*)(3 * sizeof(float)));
+                        (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(2);
 
   // texture coord attribute
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                        (void*)(6 * sizeof(float)));
+                        (void *)(6 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
   glBindVertexArray(0);
@@ -147,11 +147,11 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   float grassHeight = state.cubeScale * 0.9f;
   float halfWidth = grassWidth * 0.5f;
   float grassVertices[] = {
-      -halfWidth, 0.0f,        0.0f,       0.0f, 0.0f,  // quad A
+      -halfWidth, 0.0f,        0.0f,       0.0f, 0.0f, // quad A
       halfWidth,  0.0f,        0.0f,       1.0f, 0.0f,
       halfWidth,  grassHeight, 0.0f,       1.0f, 1.0f,
       -halfWidth, grassHeight, 0.0f,       0.0f, 1.0f,
-      0.0f,       0.0f,        -halfWidth, 0.0f, 0.0f,  // quad B
+      0.0f,       0.0f,        -halfWidth, 0.0f, 0.0f, // quad B
       0.0f,       0.0f,        halfWidth,  1.0f, 0.0f,
       0.0f,       grassHeight, halfWidth,  1.0f, 1.0f,
       0.0f,       grassHeight, -halfWidth, 0.0f, 1.0f};
@@ -172,14 +172,14 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(grassIndices), grassIndices,
                GL_STATIC_DRAW);
 
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float),
-                        (void*)(3 * sizeof(float)));
+                        (void *)(3 * sizeof(float)));
   glEnableVertexAttribArray(1);
 
   glBindBuffer(GL_ARRAY_BUFFER, state.grassInstanceVBO);
-  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+  glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void *)0);
   glEnableVertexAttribArray(3);
   glVertexAttribDivisor(3, 1);
   glBindVertexArray(0);
@@ -196,7 +196,7 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices,
                GL_STATIC_DRAW);
   glEnableVertexAttribArray(0);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
 
   // Load skybox textures
   std::vector<std::string> faces{
@@ -217,8 +217,8 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   // load image, create texture and generate mipmaps
   int width, height, nrChannels;
-  unsigned char* data =
-      stbi_load("assets/grass.png", &width, &height, &nrChannels, 0);
+  unsigned char *data = stbi_load("assets/environment/grass.png", &width,
+                                  &height, &nrChannels, 0);
   if (data) {
     GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
@@ -239,7 +239,7 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   int grassWidthPx, grassHeightPx, grassChannels;
   stbi_set_flip_vertically_on_load(true);
-  unsigned char* grassData =
+  unsigned char *grassData =
       stbi_load("assets/environment/grass_blades.png", &grassWidthPx,
                 &grassHeightPx, &grassChannels, 0);
   stbi_set_flip_vertically_on_load(false);
@@ -256,7 +256,7 @@ bool renderInit(AppState& state, GLFWwindow* window) {
   return true;
 }
 
-void renderFrame(AppState& state, GLFWwindow* window) {
+void renderFrame(AppState &state, GLFWwindow *window) {
   int framebufferWidth = 0;
   int framebufferHeight = 0;
   glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
@@ -373,7 +373,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                glm::value_ptr(flashlightDir));
   glUniform3fv(glGetUniformLocation(state.worldShader->ID, "spotColor"), 1,
                glm::value_ptr(state.flashlightColor));
-  float spotIntensity =  // for flashlight toggle
+  float spotIntensity = // for flashlight toggle
       state.camera.flashlightEnabled ? state.flashlightBrightness : 0.0f;
   glUniform1f(glGetUniformLocation(state.worldShader->ID, "spotIntensity"),
               spotIntensity);
@@ -410,9 +410,9 @@ void renderFrame(AppState& state, GLFWwindow* window) {
     if (state.treeAssetIndex >= 0 &&
         state.treeAssetIndex < static_cast<int>(state.modelAssets.size()) &&
         state.treeInstanceCount > 0) {
-      ModelAsset& asset = state.modelAssets[state.treeAssetIndex];
+      ModelAsset &asset = state.modelAssets[state.treeAssetIndex];
       if (asset.model.IsLoaded()) {
-        const ModelRenderSettings& settings = asset.renderSettings;
+        const ModelRenderSettings &settings = asset.renderSettings;
         glUniform1f(
             glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
             settings.albedoIntensity);
@@ -439,7 +439,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                     settings.useNormalMap ? 1 : 0);
         glm::mat4 identity = glm::mat4(1.0f);
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(identity));
-        for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+        for (const ModelMesh &mesh : asset.model.GetMeshes()) {
           glActiveTexture(GL_TEXTURE0);
           glBindTexture(GL_TEXTURE_2D, mesh.texture);
           if (settings.useNormalMap) {
@@ -457,7 +457,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                 0);
     glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"), 0);
 
-    for (const ModelInstance& instance : state.modelInstances) {
+    for (const ModelInstance &instance : state.modelInstances) {
       if (instance.assetIndex < 0 ||
           instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
         continue;
@@ -471,7 +471,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
         continue;
       }
 
-      ModelAsset& asset = state.modelAssets[instance.assetIndex];
+      ModelAsset &asset = state.modelAssets[instance.assetIndex];
       if (!asset.model.IsLoaded()) {
         continue;
       }
@@ -497,7 +497,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                                 glm::vec3(0.0f, 0.0f, 1.0f));
       modelMatrix = glm::scale(modelMatrix, instance.scale);
 
-      const ModelRenderSettings& settings = asset.renderSettings;
+      const ModelRenderSettings &settings = asset.renderSettings;
       glUniform1f(
           glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
           settings.albedoIntensity);
@@ -515,7 +515,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
                   settings.useNormalMap ? 1 : 0);
 
       glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
-      for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+      for (const ModelMesh &mesh : asset.model.GetMeshes()) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, mesh.texture);
         if (settings.useNormalMap) {
@@ -587,7 +587,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   }
 
   // Skybox
-  glDepthFunc(GL_LEQUAL);  // disable depth buffer (skybox is at depth 1.0)
+  glDepthFunc(GL_LEQUAL); // disable depth buffer (skybox is at depth 1.0)
   state.skyboxShader->use();
 
   // Remove translation from view matrix so skybox stays centered on player
@@ -603,7 +603,7 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glBindVertexArray(state.skyboxVAO);
   glBindTexture(GL_TEXTURE_CUBE_MAP, state.cubemapTexture);
   glDrawArrays(GL_TRIANGLES, 0, 36);
-  glDepthFunc(GL_LESS);  // Reset
+  glDepthFunc(GL_LESS); // Reset
 
   glBindFramebuffer(GL_READ_FRAMEBUFFER, state.renderTargetFbo);
   glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -614,25 +614,40 @@ void renderFrame(AppState& state, GLFWwindow* window) {
   glViewport(0, 0, framebufferWidth, framebufferHeight);
 }
 
-void renderShutdown(AppState& state) {
-  if (state.VAO) glDeleteVertexArrays(1, &state.VAO);
-  if (state.skyboxVAO) glDeleteVertexArrays(1, &state.skyboxVAO);
-  if (state.VBO) glDeleteBuffers(1, &state.VBO);
-  if (state.EBO) glDeleteBuffers(1, &state.EBO);
-  if (state.skyboxVBO) glDeleteBuffers(1, &state.skyboxVBO);
-  if (state.texture) glDeleteTextures(1, &state.texture);
-  if (state.cubemapTexture) glDeleteTextures(1, &state.cubemapTexture);
-  if (state.grassTexture) glDeleteTextures(1, &state.grassTexture);
-  if (state.grassVAO) glDeleteVertexArrays(1, &state.grassVAO);
-  if (state.grassVBO) glDeleteBuffers(1, &state.grassVBO);
-  if (state.grassEBO) glDeleteBuffers(1, &state.grassEBO);
-  if (state.grassInstanceVBO) glDeleteBuffers(1, &state.grassInstanceVBO);
-  if (state.treeInstanceVBO) glDeleteBuffers(1, &state.treeInstanceVBO);
-  if (state.renderTargetColor) glDeleteTextures(1, &state.renderTargetColor);
+void renderShutdown(AppState &state) {
+  if (state.VAO)
+    glDeleteVertexArrays(1, &state.VAO);
+  if (state.skyboxVAO)
+    glDeleteVertexArrays(1, &state.skyboxVAO);
+  if (state.VBO)
+    glDeleteBuffers(1, &state.VBO);
+  if (state.EBO)
+    glDeleteBuffers(1, &state.EBO);
+  if (state.skyboxVBO)
+    glDeleteBuffers(1, &state.skyboxVBO);
+  if (state.texture)
+    glDeleteTextures(1, &state.texture);
+  if (state.cubemapTexture)
+    glDeleteTextures(1, &state.cubemapTexture);
+  if (state.grassTexture)
+    glDeleteTextures(1, &state.grassTexture);
+  if (state.grassVAO)
+    glDeleteVertexArrays(1, &state.grassVAO);
+  if (state.grassVBO)
+    glDeleteBuffers(1, &state.grassVBO);
+  if (state.grassEBO)
+    glDeleteBuffers(1, &state.grassEBO);
+  if (state.grassInstanceVBO)
+    glDeleteBuffers(1, &state.grassInstanceVBO);
+  if (state.treeInstanceVBO)
+    glDeleteBuffers(1, &state.treeInstanceVBO);
+  if (state.renderTargetColor)
+    glDeleteTextures(1, &state.renderTargetColor);
   if (state.renderTargetDepth)
     glDeleteRenderbuffers(1, &state.renderTargetDepth);
-  if (state.renderTargetFbo) glDeleteFramebuffers(1, &state.renderTargetFbo);
-  for (ModelAsset& asset : state.modelAssets) {
+  if (state.renderTargetFbo)
+    glDeleteFramebuffers(1, &state.renderTargetFbo);
+  for (ModelAsset &asset : state.modelAssets) {
     asset.model.Shutdown();
   }
   state.modelAssets.clear();
@@ -652,14 +667,14 @@ void renderShutdown(AppState& state) {
   state.grassShader = nullptr;
 }
 
-static unsigned int loadCubemap(const std::vector<std::string>& faces) {
+static unsigned int loadCubemap(const std::vector<std::string> &faces) {
   unsigned int textureID;
   glGenTextures(1, &textureID);
   glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
 
   int width, height, nrChannels;
   for (unsigned int i = 0; i < faces.size(); i++) {
-    unsigned char* data =
+    unsigned char *data =
         stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
     if (data) {
       glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height,
@@ -680,7 +695,7 @@ static unsigned int loadCubemap(const std::vector<std::string>& faces) {
   return textureID;
 }
 
-static void uploadTerrainBuffers(AppState& state) {
+static void uploadTerrainBuffers(AppState &state) {
   glBindVertexArray(state.VAO);
   glBindBuffer(GL_ARRAY_BUFFER, state.VBO);
   glBufferData(GL_ARRAY_BUFFER, state.terrainVertices.size() * sizeof(float),
@@ -692,7 +707,7 @@ static void uploadTerrainBuffers(AppState& state) {
   glBindVertexArray(0);
 }
 
-static void uploadGrassInstances(AppState& state) {
+static void uploadGrassInstances(AppState &state) {
   glBindVertexArray(state.grassVAO);
   glBindBuffer(GL_ARRAY_BUFFER, state.grassInstanceVBO);
   glBufferData(GL_ARRAY_BUFFER, state.grassInstances.size() * sizeof(glm::vec3),
@@ -700,7 +715,7 @@ static void uploadGrassInstances(AppState& state) {
   glBindVertexArray(0);
 }
 
-static void uploadTreeInstances(AppState& state) {
+static void uploadTreeInstances(AppState &state) {
   state.treeInstanceCount = 0;
   if (state.treeAssetIndex < 0 ||
       state.treeAssetIndex >= static_cast<int>(state.modelAssets.size())) {
@@ -708,7 +723,7 @@ static void uploadTreeInstances(AppState& state) {
     return;
   }
 
-  ModelAsset& asset = state.modelAssets[state.treeAssetIndex];
+  ModelAsset &asset = state.modelAssets[state.treeAssetIndex];
   if (!asset.model.IsLoaded()) {
     state.treeInstanceDirty = false;
     return;
@@ -725,7 +740,7 @@ static void uploadTreeInstances(AppState& state) {
   float radiusSq = radius * radius;
   float centerX = state.camera.cameraPos.x;
   float centerZ = state.camera.cameraPos.z;
-  for (const ModelInstance& instance : state.modelInstances) {
+  for (const ModelInstance &instance : state.modelInstances) {
     if (instance.assetIndex != state.treeAssetIndex) {
       continue;
     }
@@ -765,21 +780,21 @@ static void uploadTreeInstances(AppState& state) {
                matrices.data(), GL_STATIC_DRAW);
 
   std::size_t vec4Size = sizeof(glm::vec4);
-  for (const ModelMesh& mesh : asset.model.GetMeshes()) {
+  for (const ModelMesh &mesh : asset.model.GetMeshes()) {
     glBindVertexArray(mesh.vao);
     glBindBuffer(GL_ARRAY_BUFFER, state.treeInstanceVBO);
     glEnableVertexAttribArray(4);
     glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)0);
+                          (void *)0);
     glEnableVertexAttribArray(5);
     glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)(vec4Size));
+                          (void *)(vec4Size));
     glEnableVertexAttribArray(6);
     glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)(vec4Size * 2));
+                          (void *)(vec4Size * 2));
     glEnableVertexAttribArray(7);
     glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(glm::mat4),
-                          (void*)(vec4Size * 3));
+                          (void *)(vec4Size * 3));
     glVertexAttribDivisor(4, 1);
     glVertexAttribDivisor(5, 1);
     glVertexAttribDivisor(6, 1);
@@ -792,7 +807,7 @@ static void uploadTreeInstances(AppState& state) {
   state.treeInstanceDirty = false;
 }
 
-static void ensureRenderTarget(AppState& state, int framebufferWidth,
+static void ensureRenderTarget(AppState &state, int framebufferWidth,
                                int framebufferHeight) {
   float scale = state.renderScale;
   if (scale <= 0.0f) {

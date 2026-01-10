@@ -14,6 +14,7 @@
 #include "ImGuizmo.h"
 
 #include "app.hpp"
+#include "render/model.hpp"
 
 static bool getMouseRay(const AppState &state, GLFWwindow *window,
                         glm::vec3 &origin, glm::vec3 &direction);
@@ -47,8 +48,13 @@ void handleEditorPicking(AppState &state, GLFWwindow *window) {
     if (getMouseRay(state, window, rayOrigin, rayDir)) {
       int hitIndex = pickModelInstance(state, rayOrigin, rayDir);
       if (hitIndex >= 0) {
-        state.selectedInstance = hitIndex;
         const ModelInstance &instance = state.modelInstances[hitIndex];
+        // Skip flashlight and trees - they can't be edited via map editor
+        if (instance.assetIndex == state.flashlightAssetIndex ||
+            instance.assetIndex == state.treeAssetIndex) {
+          return;
+        }
+        state.selectedInstance = hitIndex;
         const ModelAsset &asset = state.modelAssets[instance.assetIndex];
         const std::string &name = asset.id.empty() ? asset.path : asset.id;
         std::cout << "Selected model: " << name << std::endl;
@@ -73,6 +79,12 @@ void updateMapEditorGizmo(AppState &state, GLFWwindow *window) {
   ModelInstance &instance = state.modelInstances[state.selectedInstance];
   if (instance.assetIndex < 0 ||
       instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
+    return;
+  }
+
+  // Skip flashlight and trees - they can't be edited via map editor
+  if (instance.assetIndex == state.flashlightAssetIndex ||
+      instance.assetIndex == state.treeAssetIndex) {
     return;
   }
 
@@ -122,8 +134,54 @@ void updateMapEditorGizmo(AppState &state, GLFWwindow *window) {
   }
 
   static bool wasUsing = false;
-  if (wasUsing && !usingGizmo && instance.freeArea) {
-    state.treeDirty = true;
+  if (wasUsing && !usingGizmo) {
+    // Handle gizmo finish event
+    if (instance.freeArea) {
+      state.treeDirty = true;
+    }
+
+    // Save scale to model.json if scale operation was used
+    // Skip flashlight and trees - they use hardcoded/random scales
+    if (state.gizmoOperation == GizmoScale &&
+        instance.assetIndex != state.treeAssetIndex &&
+        instance.assetIndex != state.flashlightAssetIndex &&
+        instance.assetIndex >= 0 &&
+        instance.assetIndex < static_cast<int>(state.modelAssets.size())) {
+      const ModelAsset &asset = state.modelAssets[instance.assetIndex];
+      if (asset.model.IsLoaded() && !asset.path.empty()) {
+        // Get model root directory (parent of source directory where model.json
+        // is)
+        std::string modelPath = asset.path;
+        size_t lastSlash = modelPath.find_last_of("/\\");
+        if (lastSlash != std::string::npos) {
+          std::string modelDirectory = modelPath.substr(0, lastSlash);
+          // Get parent directory (model root where model.json is)
+          size_t parentSlash = modelDirectory.find_last_of("/\\");
+          if (parentSlash != std::string::npos) {
+            std::string modelRootDirectory =
+                modelDirectory.substr(0, parentSlash);
+
+            // Load existing config to preserve textureMapping
+            ModelConfig config = loadModelConfig(modelRootDirectory);
+
+            // Calculate effective scale: baseScale * average(instance.scale)
+            float baseScale = asset.model.GetBaseScale();
+            float avgInstanceScale =
+                (instance.scale.x + instance.scale.y + instance.scale.z) / 3.0f;
+            float effectiveScale = baseScale * avgInstanceScale;
+
+            // Update scale in config
+            config.scale = effectiveScale;
+
+            // Save to model.json
+            if (saveModelConfig(modelRootDirectory, config)) {
+              std::cout << "Saved scale " << effectiveScale << " to "
+                        << modelRootDirectory << "/model.json" << std::endl;
+            }
+          }
+        }
+      }
+    }
   }
   wasUsing = usingGizmo;
 }
@@ -173,9 +231,9 @@ static int pickModelInstance(const AppState &state, const glm::vec3 &origin,
         instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
       continue;
     }
-    if ((!state.flashlightShown || state.editorEnabled) &&
-        instance.assetIndex == state.flashlightAssetIndex &&
-        !instance.isEditorPlaced) {
+    // Skip flashlight and trees, they can't be picked in map editor
+    if (instance.assetIndex == state.flashlightAssetIndex ||
+        instance.assetIndex == state.treeAssetIndex) {
       continue;
     }
 

@@ -731,6 +731,14 @@ void initWorldModels(AppState &state) {
   state.handRadioAssetIndex = handRadioAsset;
   state.deadmanAssetIndex = deadmanAsset;
   state.deadBodyPlasticbagAssetIndex = deadBodyPlasticbagAsset;
+
+  // Initialize inventory state
+  state.currentHandItem = HandItemFlashlight;
+  state.ownedHandItems[HandItemFlashlight] = true;
+  if (handRadioAsset >= 0) {
+    state.ownedHandItems[HandItemRadio] = true;
+  }
+
   scatterTrees(state, treeAsset);
 
   // PLACE MODELS IN WORLD
@@ -758,6 +766,14 @@ void initWorldModels(AppState &state) {
     state.flashlightInstanceIndex = addModelInstance(
         state, flashlightAsset, state.camera.cameraPos, glm::vec3(0.0f),
         glm::vec3(state.flashlightScale), false);
+  }
+
+  // add hand radio
+  // Hand radio uses hardcoded scale, not from model.json
+  if (handRadioAsset >= 0) {
+    state.handRadioInstanceIndex = addModelInstance(
+        state, handRadioAsset, state.camera.cameraPos, glm::vec3(0.0f),
+        glm::vec3(state.handRadioScale), false);
   }
 
   // // add dead_tree 0.01f is the scale
@@ -824,19 +840,49 @@ void updateWorldModelHeights(AppState &state) {
 }
 
 void updateFlashlightAttachment(AppState &state) {
-  if (state.flashlightAssetIndex < 0) {
+  // Deprecated: use updateHandItemAttachment instead
+  updateHandItemAttachment(state, HandItemFlashlight);
+}
+
+void updateHandItemAttachment(AppState &state, HandItem item) {
+  int assetIndex = -1;
+  int *instanceIndexPtr = nullptr;
+  float forwardOffset = 0.0f;
+  float rightOffset = 0.0f;
+  float downOffset = 0.0f;
+
+  // Get asset and instance indices based on item type
+  switch (item) {
+  case HandItemFlashlight:
+    assetIndex = state.flashlightAssetIndex;
+    instanceIndexPtr = &state.flashlightInstanceIndex;
+    forwardOffset = state.flashlightOffsetForward;
+    rightOffset = state.flashlightOffsetRight;
+    downOffset = state.flashlightOffsetDown;
+    break;
+  case HandItemRadio:
+    assetIndex = state.handRadioAssetIndex;
+    instanceIndexPtr = &state.handRadioInstanceIndex;
+    forwardOffset = state.handRadioOffsetForward;
+    rightOffset = state.handRadioOffsetRight;
+    downOffset = state.handRadioOffsetDown;
+    break;
+  case HandItemNone:
+  default:
     return;
   }
 
-  int instanceIndex = state.flashlightInstanceIndex;
+  if (assetIndex < 0 || instanceIndexPtr == nullptr) {
+    return;
+  }
+
+  int instanceIndex = *instanceIndexPtr;
   if (instanceIndex < 0 ||
       instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
-      state.modelInstances[instanceIndex].assetIndex !=
-          state.flashlightAssetIndex ||
+      state.modelInstances[instanceIndex].assetIndex != assetIndex ||
       state.modelInstances[instanceIndex].isEditorPlaced) {
-    instanceIndex =
-        findInstanceIndexByAsset(state, state.flashlightAssetIndex, true);
-    state.flashlightInstanceIndex = instanceIndex;
+    instanceIndex = findInstanceIndexByAsset(state, assetIndex, true);
+    *instanceIndexPtr = instanceIndex;
   }
 
   if (instanceIndex < 0) {
@@ -853,15 +899,15 @@ void updateFlashlightAttachment(AppState &state) {
   right = glm::normalize(right);
   glm::vec3 up = glm::normalize(glm::cross(right, forward));
 
-  float forwardOffset = state.cubeScale * state.flashlightOffsetForward;
-  float rightOffset = state.cubeScale * state.flashlightOffsetRight;
-  float downOffset = state.cubeScale * state.flashlightOffsetDown;
+  float forwardOffsetScaled = state.cubeScale * forwardOffset;
+  float rightOffsetScaled = state.cubeScale * rightOffset;
+  float downOffsetScaled = state.cubeScale * downOffset;
   float yawOffset = 0.0f;
   float pitchOffset = 0.0f;
   float rollOffset = 0.0f;
 
-  glm::vec3 position = state.camera.cameraPos + (forward * forwardOffset) +
-                       (right * rightOffset) + (up * downOffset);
+  glm::vec3 position = state.camera.cameraPos + (forward * forwardOffsetScaled) +
+                       (right * rightOffsetScaled) + (up * downOffsetScaled);
   position.y += state.camera.visualBobOffset;
   instance.position = position;
   instance.rotation = glm::vec3(pitchOffset, yawOffset, rollOffset);

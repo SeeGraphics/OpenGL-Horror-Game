@@ -11,6 +11,12 @@
 class Shader;
 struct GLFWwindow;
 
+enum HandItem : int {
+  HandItemNone = 0,
+  HandItemFlashlight = 1,
+  HandItemRadio = 2
+};
+
 struct AppState {
   // GENERAL
   float cubeScale = 1.0f;
@@ -36,6 +42,10 @@ struct AppState {
   glm::vec3 moonDir = glm::vec3(-0.2f, -1.0f, -0.3f);
   glm::vec3 moonColor = glm::vec3(0.6f, 0.65f, 0.8f);
 
+  // HAND ITEMS INVENTORY
+  HandItem currentHandItem = HandItemFlashlight;
+  std::vector<bool> ownedHandItems = {false, true, false};  // None, Flashlight, Radio
+
   // FLASHLIGHT
   float flashlightBrightness = 5.0f;
   float flashlightRadius = 37.0f;
@@ -46,6 +56,11 @@ struct AppState {
   glm::vec3 flashlightBeamOffset = glm::vec3(0.0f);
   glm::vec3 flashlightBeamForward = glm::vec3(0.127f, -0.225f, -0.831f);
   bool flashlightShown = true;
+
+  // HAND RADIO
+  float handRadioOffsetForward = 0.450f;
+  float handRadioOffsetRight = 0.370f;
+  float handRadioOffsetDown = -0.305f;
 
   // FOG
   float fogDensity = 0.250f;

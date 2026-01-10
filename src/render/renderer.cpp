@@ -24,8 +24,8 @@ static void ensureRenderTarget(AppState &state, int framebufferWidth,
                                int framebufferHeight);
 static void buildCameraBasis(const AppState &state, glm::vec3 &forward,
                              glm::vec3 &right, glm::vec3 &up);
-static bool buildFlashlightModelMatrix(const AppState &state,
-                                       glm::mat4 &modelMatrix);
+static bool buildHandItemModelMatrix(const AppState &state, HandItem item,
+                                     glm::mat4 &modelMatrix);
 
 static void buildCameraBasis(const AppState &state, glm::vec3 &forward,
                              glm::vec3 &right, glm::vec3 &up) {
@@ -38,24 +38,40 @@ static void buildCameraBasis(const AppState &state, glm::vec3 &forward,
   up = glm::normalize(glm::cross(right, forward));
 }
 
-static bool buildFlashlightModelMatrix(const AppState &state,
-                                       glm::mat4 &modelMatrix) {
-  if (state.flashlightAssetIndex < 0) {
+static bool buildHandItemModelMatrix(const AppState &state, HandItem item,
+                                     glm::mat4 &modelMatrix) {
+  int assetIndex = -1;
+  int instanceIndex = -1;
+
+  // Get asset and instance indices based on item type
+  switch (item) {
+  case HandItemFlashlight:
+    assetIndex = state.flashlightAssetIndex;
+    instanceIndex = state.flashlightInstanceIndex;
+    break;
+  case HandItemRadio:
+    assetIndex = state.handRadioAssetIndex;
+    instanceIndex = state.handRadioInstanceIndex;
+    break;
+  case HandItemNone:
+  default:
     return false;
   }
 
-  int instanceIndex = state.flashlightInstanceIndex;
+  if (assetIndex < 0) {
+    return false;
+  }
+
+  // Find instance if index is invalid
   if (instanceIndex < 0 ||
       instanceIndex >= static_cast<int>(state.modelInstances.size()) ||
-      state.modelInstances[instanceIndex].assetIndex !=
-          state.flashlightAssetIndex ||
+      state.modelInstances[instanceIndex].assetIndex != assetIndex ||
       state.modelInstances[instanceIndex].isEditorPlaced) {
     instanceIndex = -1;
     for (int i = static_cast<int>(state.modelInstances.size()) - 1; i >= 0;
          --i) {
-      const ModelInstance &instance = state.modelInstances[i];
-      if (instance.assetIndex == state.flashlightAssetIndex &&
-          !instance.isEditorPlaced) {
+      const ModelInstance &inst = state.modelInstances[i];
+      if (inst.assetIndex == assetIndex && !inst.isEditorPlaced) {
         instanceIndex = i;
         break;
       }
@@ -351,11 +367,14 @@ void renderFrame(AppState &state, GLFWwindow *window) {
   glUniform1i(glGetUniformLocation(state.worldShader->ID, "useInstancing"), 0);
   glUniform1i(glGetUniformLocation(state.worldShader->ID, "depthOnly"), 0);
 
-  // flashlight spotlight
+  // flashlight spotlight (only active when flashlight is selected)
   glm::vec3 flashlightPos = state.camera.cameraPos;
   glm::vec3 flashlightDir = glm::normalize(state.camera.cameraFront);
   glm::mat4 flashlightModel = glm::mat4(1.0f);
-  if (buildFlashlightModelMatrix(state, flashlightModel)) {
+  bool flashlightActive =
+      (state.currentHandItem == HandItemFlashlight) &&
+      buildHandItemModelMatrix(state, HandItemFlashlight, flashlightModel);
+  if (flashlightActive) {
     glm::vec3 localForward = state.flashlightBeamForward;
     if (glm::length(localForward) < 0.001f) {
       localForward = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -373,8 +392,10 @@ void renderFrame(AppState &state, GLFWwindow *window) {
                glm::value_ptr(flashlightDir));
   glUniform3fv(glGetUniformLocation(state.worldShader->ID, "spotColor"), 1,
                glm::value_ptr(state.flashlightColor));
-  float spotIntensity = // for flashlight toggle
-      state.camera.flashlightEnabled ? state.flashlightBrightness : 0.0f;
+  float spotIntensity = 0.0f;
+  if (flashlightActive && state.camera.flashlightEnabled) {
+    spotIntensity = state.flashlightBrightness;
+  }
   glUniform1f(glGetUniformLocation(state.worldShader->ID, "spotIntensity"),
               spotIntensity);
   glUniform1f(glGetUniformLocation(state.worldShader->ID, "spotInnerCutoff"),
@@ -465,9 +486,21 @@ void renderFrame(AppState &state, GLFWwindow *window) {
       if (instance.assetIndex == state.treeAssetIndex) {
         continue;
       }
-      if ((!state.flashlightShown || state.editorEnabled) &&
-          instance.assetIndex == state.flashlightAssetIndex &&
-          !instance.isEditorPlaced) {
+      // Skip hand items that are not currently selected
+      if (!instance.isEditorPlaced) {
+        if (instance.assetIndex == state.flashlightAssetIndex &&
+            state.currentHandItem != HandItemFlashlight) {
+          continue;
+        }
+        if (instance.assetIndex == state.handRadioAssetIndex &&
+            state.currentHandItem != HandItemRadio) {
+          continue;
+        }
+      }
+      // Skip flashlight/hand radio if none is selected
+      if ((instance.assetIndex == state.flashlightAssetIndex ||
+           instance.assetIndex == state.handRadioAssetIndex) &&
+          state.currentHandItem == HandItemNone) {
         continue;
       }
 
@@ -478,7 +511,9 @@ void renderFrame(AppState &state, GLFWwindow *window) {
 
       glm::mat4 modelMatrix = glm::mat4(1.0f);
       modelMatrix = glm::translate(modelMatrix, instance.position);
-      if (instance.assetIndex == state.flashlightAssetIndex) {
+      // Apply camera basis to hand items (flashlight and radio)
+      if (instance.assetIndex == state.flashlightAssetIndex ||
+          instance.assetIndex == state.handRadioAssetIndex) {
         glm::vec3 forward;
         glm::vec3 right;
         glm::vec3 up;
@@ -553,12 +588,14 @@ void renderFrame(AppState &state, GLFWwindow *window) {
                 state.ambientStrength);
     glUniform1f(glGetUniformLocation(state.grassShader->ID, "diffuseStrength"),
                 state.diffuseStrength);
+    // Use same flashlight active check for grass shader
     glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotPos"), 1,
                  glm::value_ptr(flashlightPos));
     glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotDir"), 1,
                  glm::value_ptr(flashlightDir));
     glUniform3fv(glGetUniformLocation(state.grassShader->ID, "spotColor"), 1,
                  glm::value_ptr(state.flashlightColor));
+    // Use same spotIntensity from main shader (already set above)
     glUniform1f(glGetUniformLocation(state.grassShader->ID, "spotIntensity"),
                 spotIntensity);
     glUniform1f(glGetUniformLocation(state.grassShader->ID, "spotInnerCutoff"),

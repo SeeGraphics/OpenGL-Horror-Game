@@ -49,8 +49,9 @@ void handleEditorPicking(AppState &state, GLFWwindow *window) {
       int hitIndex = pickModelInstance(state, rayOrigin, rayDir);
       if (hitIndex >= 0) {
         const ModelInstance &instance = state.modelInstances[hitIndex];
-        // Skip flashlight and trees - they can't be edited via map editor
+        // Skip flashlight, hand radio, and trees - they can't be edited via map editor
         if (instance.assetIndex == state.flashlightAssetIndex ||
+            instance.assetIndex == state.handRadioAssetIndex ||
             instance.assetIndex == state.treeAssetIndex) {
           return;
         }
@@ -82,8 +83,9 @@ void updateMapEditorGizmo(AppState &state, GLFWwindow *window) {
     return;
   }
 
-  // Skip flashlight and trees - they can't be edited via map editor
+  // Skip flashlight, hand radio, and trees - they can't be edited via map editor
   if (instance.assetIndex == state.flashlightAssetIndex ||
+      instance.assetIndex == state.handRadioAssetIndex ||
       instance.assetIndex == state.treeAssetIndex) {
     return;
   }
@@ -141,10 +143,11 @@ void updateMapEditorGizmo(AppState &state, GLFWwindow *window) {
     }
 
     // Save scale to model.json if scale operation was used
-    // Skip flashlight and trees - they use hardcoded/random scales
+    // Skip flashlight, hand radio, and trees - they use hardcoded/random scales
     if (state.gizmoOperation == GizmoScale &&
         instance.assetIndex != state.treeAssetIndex &&
         instance.assetIndex != state.flashlightAssetIndex &&
+        instance.assetIndex != state.handRadioAssetIndex &&
         instance.assetIndex >= 0 &&
         instance.assetIndex < static_cast<int>(state.modelAssets.size())) {
       const ModelAsset &asset = state.modelAssets[instance.assetIndex];
@@ -231,8 +234,9 @@ static int pickModelInstance(const AppState &state, const glm::vec3 &origin,
         instance.assetIndex >= static_cast<int>(state.modelAssets.size())) {
       continue;
     }
-    // Skip flashlight and trees, they can't be picked in map editor
+    // Skip flashlight, hand radio, and trees - they can't be picked in map editor
     if (instance.assetIndex == state.flashlightAssetIndex ||
+        instance.assetIndex == state.handRadioAssetIndex ||
         instance.assetIndex == state.treeAssetIndex) {
       continue;
     }

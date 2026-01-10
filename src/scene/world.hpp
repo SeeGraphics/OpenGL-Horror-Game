@@ -5,6 +5,9 @@
 
 struct AppState;
 
+// Forward declaration of HandItem enum (defined in app.hpp)
+enum HandItem : int;
+
 void buildFloor(AppState& state);
 void buildGrass(AppState& state);
 void updateGroundCollision(AppState& state);
@@ -15,6 +18,7 @@ int addModelInstance(AppState& state, int assetIndex, const glm::vec3& position,
                      const glm::vec3& rotation, const glm::vec3& scale,
                      bool isEditorPlaced);
 void rebuildWorldTrees(AppState& state);
-void updateFlashlightAttachment(AppState& state);
+void updateFlashlightAttachment(AppState& state);  // Deprecated, use updateHandItemAttachment
+void updateHandItemAttachment(AppState& state, HandItem item);
 
 #endif

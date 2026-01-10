@@ -6,6 +6,8 @@
 
 #include "app.hpp"
 
+#include <imgui.h>
+
 #include "render/renderer.hpp"
 #include "scene/world.hpp"
 #include "ui/debugUi.hpp"
@@ -15,12 +17,15 @@ static AppState *g_state = nullptr;
 
 static void processInput(GLFWwindow *window);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
+static void scroll_callback(GLFWwindow *window, double xoffset,
+                            double yoffset);
 static void framebuffer_size_callback(GLFWwindow *window, int width,
                                       int height);
 
 bool AppInit(AppState &state, GLFWwindow *window) {
   g_state = &state;
   glfwSetCursorPosCallback(window, mouse_callback);
+  glfwSetScrollCallback(window, scroll_callback);
 
   if (!renderInit(state, window)) {
     return false;
@@ -72,7 +77,7 @@ void AppFrame(AppState &state, GLFWwindow *window) {
   }
 
   updateGroundCollision(state);
-  updateFlashlightAttachment(state);
+  updateHandItemAttachment(state, state.currentHandItem);
 
   if (!state.freeCam && !wasGrounded && state.camera.isGrounded) {
     playSound(state.audio, SoundId::LandingOnGrass);
@@ -207,6 +212,86 @@ static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
     return;
   if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
     g_state->camera.ProcessMouse(xpos, ypos);
+  }
+}
+
+static void scroll_callback(GLFWwindow *window, double xoffset,
+                            double yoffset) {
+  (void)window;
+  (void)xoffset;
+  if (!g_state)
+    return;
+  AppState &state = *g_state;
+
+  // Skip if debug UI is visible and ImGui wants to capture mouse (for scrollbars)
+  // Only check this when debug UI is actually shown to avoid blocking during gameplay
+  if (state.showDebugUi) {
+    ImGuiIO &io = ImGui::GetIO();
+    if (io.WantCaptureMouse) {
+      return;
+    }
+  }
+
+  // Skip if editor is enabled or mouse is not disabled
+  if (state.editorEnabled ||
+      glfwGetInputMode(window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED) {
+    return;
+  }
+
+  // Cycle through hand items on scroll
+  if (yoffset != 0.0) {
+    // Build list of available items: always include None, then add owned items
+    std::vector<HandItem> availableItems;
+    availableItems.push_back(HandItemNone);  // None is always available
+
+    // Add owned items (Flashlight and Radio)
+    for (int i = 1; i < 3; ++i) {  // Start from 1 (skip None, already added)
+      if (i < static_cast<int>(state.ownedHandItems.size()) &&
+          state.ownedHandItems[i]) {
+        availableItems.push_back(static_cast<HandItem>(i));
+      }
+    }
+
+    if (availableItems.empty()) {
+      return;  // Should never happen since None is always added
+    }
+
+    // Find current item index in available items list
+    int currentIndex = -1;
+    for (size_t i = 0; i < availableItems.size(); ++i) {
+      if (availableItems[i] == state.currentHandItem) {
+        currentIndex = static_cast<int>(i);
+        break;
+      }
+    }
+
+    // If current item not found, default to first item (None)
+    if (currentIndex < 0) {
+      state.currentHandItem = availableItems[0];
+      return;
+    }
+
+    // Store previous item to detect flashlight switching
+    HandItem previousItem = state.currentHandItem;
+
+    // Cycle based on scroll direction
+    if (yoffset > 0.0) {
+      // Scroll up: next item
+      currentIndex = (currentIndex + 1) % static_cast<int>(availableItems.size());
+    } else {
+      // Scroll down: previous item
+      currentIndex =
+          (currentIndex - 1 + static_cast<int>(availableItems.size())) %
+          static_cast<int>(availableItems.size());
+    }
+
+    state.currentHandItem = availableItems[currentIndex];
+
+    // Reset flashlight state when switching away from flashlight
+    if (previousItem == HandItemFlashlight &&
+        state.currentHandItem != HandItemFlashlight) {
+      state.camera.flashlightEnabled = false;
+    }
   }
 }
 

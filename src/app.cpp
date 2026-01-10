@@ -5,6 +5,7 @@
 // clang-format on
 
 #include "app.hpp"
+#include <iostream>
 
 #include <imgui.h>
 
@@ -17,8 +18,7 @@ static AppState *g_state = nullptr;
 
 static void processInput(GLFWwindow *window);
 static void mouse_callback(GLFWwindow *window, double xpos, double ypos);
-static void scroll_callback(GLFWwindow *window, double xoffset,
-                            double yoffset);
+static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset);
 static void framebuffer_size_callback(GLFWwindow *window, int width,
                                       int height);
 
@@ -217,14 +217,13 @@ static void mouse_callback(GLFWwindow *window, double xpos, double ypos) {
 
 static void scroll_callback(GLFWwindow *window, double xoffset,
                             double yoffset) {
-  (void)window;
-  (void)xoffset;
   if (!g_state)
     return;
   AppState &state = *g_state;
 
-  // Skip if debug UI is visible and ImGui wants to capture mouse (for scrollbars)
-  // Only check this when debug UI is actually shown to avoid blocking during gameplay
+  // Skip if debug UI is visible and ImGui wants to capture mouse (for
+  // scrollbars) Only check this when debug UI is actually shown to avoid
+  // blocking during gameplay
   if (state.showDebugUi) {
     ImGuiIO &io = ImGui::GetIO();
     if (io.WantCaptureMouse) {
@@ -238,14 +237,20 @@ static void scroll_callback(GLFWwindow *window, double xoffset,
     return;
   }
 
+  // On macOS, Shift+scroll converts vertical scroll to horizontal scroll
+  // Check if Shift is held and use appropriate offset
+  bool shiftHeld = (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                    glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS);
+  double scrollDelta = shiftHeld ? xoffset : yoffset;
+
   // Cycle through hand items on scroll
-  if (yoffset != 0.0) {
+  if (scrollDelta != 0.0) {
     // Build list of available items: always include None, then add owned items
     std::vector<HandItem> availableItems;
-    availableItems.push_back(HandItemNone);  // None is always available
+    availableItems.push_back(HandItemNone); // None is always available
 
     // Add owned items (Flashlight and Radio)
-    for (int i = 1; i < 3; ++i) {  // Start from 1 (skip None, already added)
+    for (int i = 1; i < 3; ++i) { // Start from 1 (skip None, already added)
       if (i < static_cast<int>(state.ownedHandItems.size()) &&
           state.ownedHandItems[i]) {
         availableItems.push_back(static_cast<HandItem>(i));
@@ -253,7 +258,7 @@ static void scroll_callback(GLFWwindow *window, double xoffset,
     }
 
     if (availableItems.empty()) {
-      return;  // Should never happen since None is always added
+      return; // Should never happen since None is always added
     }
 
     // Find current item index in available items list
@@ -275,11 +280,12 @@ static void scroll_callback(GLFWwindow *window, double xoffset,
     HandItem previousItem = state.currentHandItem;
 
     // Cycle based on scroll direction
-    if (yoffset > 0.0) {
-      // Scroll up: next item
-      currentIndex = (currentIndex + 1) % static_cast<int>(availableItems.size());
+    if (scrollDelta > 0.0) {
+      // Scroll up (or right when Shift held): next item
+      currentIndex =
+          (currentIndex + 1) % static_cast<int>(availableItems.size());
     } else {
-      // Scroll down: previous item
+      // Scroll down (or left when Shift held): previous item
       currentIndex =
           (currentIndex - 1 + static_cast<int>(availableItems.size())) %
           static_cast<int>(availableItems.size());

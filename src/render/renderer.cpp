@@ -467,6 +467,15 @@ void renderFrame(AppState &state, GLFWwindow *window) {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, mesh.normalMap);
           }
+          // Bind emissive texture if available
+          bool hasEmissive = (mesh.emissiveMap != 0);
+          glUniform1i(glGetUniformLocation(state.worldShader->ID, "useEmissiveMap"),
+                      hasEmissive ? 1 : 0);
+          if (hasEmissive) {
+            glActiveTexture(GL_TEXTURE2);
+            glBindTexture(GL_TEXTURE_2D, mesh.emissiveMap);
+            glUniform1i(glGetUniformLocation(state.worldShader->ID, "emissiveMap"), 2);
+          }
           glBindVertexArray(mesh.vao);
           glDrawElementsInstanced(GL_TRIANGLES, mesh.indexCount,
                                   GL_UNSIGNED_INT, 0, state.treeInstanceCount);
@@ -557,6 +566,15 @@ void renderFrame(AppState &state, GLFWwindow *window) {
           glActiveTexture(GL_TEXTURE1);
           glBindTexture(GL_TEXTURE_2D, mesh.normalMap);
         }
+        // Bind emissive texture if available
+        bool hasEmissive = (mesh.emissiveMap != 0);
+        glUniform1i(glGetUniformLocation(state.worldShader->ID, "useEmissiveMap"),
+                    hasEmissive ? 1 : 0);
+        if (hasEmissive) {
+          glActiveTexture(GL_TEXTURE2);
+          glBindTexture(GL_TEXTURE_2D, mesh.emissiveMap);
+          glUniform1i(glGetUniformLocation(state.worldShader->ID, "emissiveMap"), 2);
+        }
         glBindVertexArray(mesh.vao);
         glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
       }
@@ -574,6 +592,8 @@ void renderFrame(AppState &state, GLFWwindow *window) {
                 0);
     glUniform1f(glGetUniformLocation(state.worldShader->ID, "albedoIntensity"),
                 1.0f);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "useEmissiveMap"), 0);
+    glUniform1i(glGetUniformLocation(state.worldShader->ID, "emissiveMap"), 2);
   }
 
   if (!state.grassInstances.empty()) {

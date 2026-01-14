@@ -14,6 +14,7 @@ struct ModelMesh {
   unsigned int ebo = 0;
   unsigned int texture = 0;
   unsigned int normalMap = 0;
+  unsigned int emissiveMap = 0;
   int indexCount = 0;
 };
 

@@ -104,7 +104,7 @@ static const ModelTemplate gModelTemplates[] = {
      makeBarrelSettings(), false},
     {"white_van", "assets/models/white_van/source/white_van.fbx",
      makeWhiteVanSettings(), false},
-    {"hand_radio", "assets/models/hand_radio/source/Radio.fbx",
+    {"hand_radio", "assets/models/hand_radio_emissive/scene.gltf",
      makeHandRadioSettings(), false},
     {"deadman", "assets/models/deadman/source/deadman.fbx",
      makeDeadmanSettings(), false},
@@ -271,6 +271,25 @@ static unsigned int getDefaultNormalTexture() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
                normalPixel);
+  return textureId;
+}
+
+static unsigned int getDefaultEmissiveTexture() {
+  static unsigned int textureId = 0;
+  if (textureId != 0) {
+    return textureId;
+  }
+
+  // Default emissive is black (no emission)
+  unsigned char blackPixel[3] = {0, 0, 0};
+  glGenTextures(1, &textureId);
+  glBindTexture(GL_TEXTURE_2D, textureId);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 1, 1, 0, GL_RGB, GL_UNSIGNED_BYTE,
+               blackPixel);
   return textureId;
 }
 
@@ -463,13 +482,26 @@ static std::string getMaterialName(const aiScene *scene, aiMesh *mesh) {
 
 static TextureInfo
 loadDiffuseTexture(const aiScene *scene, aiMesh *mesh,
-                   const std::string & /* modelDirectory */,
+                   const std::string &modelDirectory,
                    const std::string &texturesDirectory,
                    const std::map<std::string, std::string> &textureMapping) {
   std::string materialName = getMaterialName(scene, mesh);
   TextureInfo result;
 
-  // Try JSON texture mapping
+  // First, try to load texture directly from material (works for glTF models)
+  result = loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
+                               aiTextureType_DIFFUSE);
+  if (result.id != 0) {
+    return result;
+  }
+  // Try BASE_COLOR for glTF PBR materials
+  result = loadMaterialTexture(scene, mesh, modelDirectory, texturesDirectory,
+                               aiTextureType_BASE_COLOR);
+  if (result.id != 0) {
+    return result;
+  }
+
+  // Fallback to JSON texture mapping (for FBX models)
   if (!textureMapping.empty() && !materialName.empty()) {
     auto it = textureMapping.find(materialName);
     if (it != textureMapping.end()) {
@@ -483,18 +515,10 @@ loadDiffuseTexture(const aiScene *scene, aiMesh *mesh,
                   << "' but file not found in " << texturesDirectory
                   << std::endl;
       }
-    } else {
-      // Material name not found in mapping
-      std::cout << "Missing mapping for material: '" << materialName
-                << "' (add to model.json)" << std::endl;
     }
-  } else if (!materialName.empty() && textureMapping.empty()) {
-    // Material exists but no JSON file found
-    std::cout << "Material '" << materialName
-              << "' found but no model.json file exists" << std::endl;
   }
 
-  // Fallback to default white texture if JSON mapping fails
+  // Fallback to default white texture if all methods fail
   result.id = getDefaultWhiteTexture();
 
   return result;
@@ -537,11 +561,26 @@ static unsigned int loadNormalTexture(const aiScene *scene, aiMesh *mesh,
   return getDefaultNormalTexture();
 }
 
+static unsigned int loadEmissiveTexture(const aiScene *scene, aiMesh *mesh,
+                                        const std::string &modelDirectory,
+                                        const std::string &texturesDirectory) {
+  // Try to load emissive texture from material
+  TextureInfo result = loadMaterialTexture(
+      scene, mesh, modelDirectory, texturesDirectory, aiTextureType_EMISSIVE);
+  if (result.id != 0) {
+    return result.id;
+  }
+
+  // No emissive texture found, return default black texture
+  return getDefaultEmissiveTexture();
+}
+
 Model::Model(const char *path) { Load(path); }
 
 void Model::Shutdown() {
   unsigned int defaultDiffuse = getDefaultWhiteTexture();
   unsigned int defaultNormal = getDefaultNormalTexture();
+  unsigned int defaultEmissive = getDefaultEmissiveTexture();
   for (ModelMesh &mesh : meshes) {
     if (mesh.vao)
       glDeleteVertexArrays(1, &mesh.vao);
@@ -553,6 +592,8 @@ void Model::Shutdown() {
       glDeleteTextures(1, &mesh.texture);
     if (mesh.normalMap && mesh.normalMap != defaultNormal)
       glDeleteTextures(1, &mesh.normalMap);
+    if (mesh.emissiveMap && mesh.emissiveMap != defaultEmissive)
+      glDeleteTextures(1, &mesh.emissiveMap);
   }
   meshes.clear();
   isLoaded = false;
@@ -662,11 +703,14 @@ void Model::Load(const char *path, const ModelRenderSettings &settings) {
                                              texturesDirectory, textureMapping);
     unsigned int normalMap = loadNormalTexture(scene, mesh, modelDirectory,
                                                texturesDirectory, diffuse.path);
+    unsigned int emissiveMap =
+        loadEmissiveTexture(scene, mesh, modelDirectory, texturesDirectory);
 
     ModelMesh outMesh;
     outMesh.indexCount = static_cast<int>(indices.size());
     outMesh.texture = diffuse.id;
     outMesh.normalMap = normalMap;
+    outMesh.emissiveMap = emissiveMap;
 
     glGenVertexArrays(1, &outMesh.vao);
     glGenBuffers(1, &outMesh.vbo);

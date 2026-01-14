@@ -8,7 +8,9 @@ in vec3 Tangent;
 
 uniform sampler2D ourTexture;
 uniform sampler2D normalMap;
+uniform sampler2D emissiveMap;
 uniform bool useNormalMap;
+uniform bool useEmissiveMap;
 uniform float normalStrength;
 uniform bool normalDebug;
 uniform bool depthOnly;
@@ -92,10 +94,16 @@ void main()
     vec3 color =
         (ambient + diffuse + spotDiffuse) * albedo + specular + spotSpecular;
 
+    // Add emissive contribution (glows independently of lighting)
+    vec3 emissive = vec3(0.0);
+    if (useEmissiveMap) {
+        emissive = texture(emissiveMap, TexCoord).rgb;
+    }
+
     float distance = length(viewPos - FragPos);
     float fogFactor = exp(-fogDensity * distance);
     fogFactor = clamp(fogFactor, 0.0, 1.0);
-    vec3 finalColor = mix(fogColor, color, fogFactor);
+    vec3 finalColor = mix(fogColor, color + emissive, fogFactor);
 
     FragColor = vec4(finalColor, 1.0);
 }

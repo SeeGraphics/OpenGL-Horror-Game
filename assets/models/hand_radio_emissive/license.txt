@@ -1,0 +1,8 @@
+Model Information:
+* title:	PS1 Hand Radio
+* source:	https://sketchfab.com/3d-models/ps1-hand-radio-b5a0a3004a8340c690681043a467edc8
+* author:	SketchyBot (https://sketchfab.com/SketchyB0t_3D_Fabrication)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

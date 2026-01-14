@@ -850,6 +850,9 @@ void updateHandItemAttachment(AppState &state, HandItem item) {
   float forwardOffset = 0.0f;
   float rightOffset = 0.0f;
   float downOffset = 0.0f;
+  float yawOffset = 0.0f;
+  float pitchOffset = 0.0f;
+  float rollOffset = 0.0f;
 
   // Get asset and instance indices based on item type
   switch (item) {
@@ -859,6 +862,7 @@ void updateHandItemAttachment(AppState &state, HandItem item) {
     forwardOffset = state.flashlightOffsetForward;
     rightOffset = state.flashlightOffsetRight;
     downOffset = state.flashlightOffsetDown;
+    // Flashlight rotation offsets default to 0.0f (already initialized)
     break;
   case HandItemRadio:
     assetIndex = state.handRadioAssetIndex;
@@ -866,6 +870,9 @@ void updateHandItemAttachment(AppState &state, HandItem item) {
     forwardOffset = state.handRadioOffsetForward;
     rightOffset = state.handRadioOffsetRight;
     downOffset = state.handRadioOffsetDown;
+    yawOffset = state.handRadioYawOffset;
+    pitchOffset = state.handRadioPitchOffset;
+    rollOffset = state.handRadioRollOffset;
     break;
   case HandItemNone:
   default:
@@ -902,11 +909,9 @@ void updateHandItemAttachment(AppState &state, HandItem item) {
   float forwardOffsetScaled = state.cubeScale * forwardOffset;
   float rightOffsetScaled = state.cubeScale * rightOffset;
   float downOffsetScaled = state.cubeScale * downOffset;
-  float yawOffset = 0.0f;
-  float pitchOffset = 0.0f;
-  float rollOffset = 0.0f;
 
-  glm::vec3 position = state.camera.cameraPos + (forward * forwardOffsetScaled) +
+  glm::vec3 position = state.camera.cameraPos +
+                       (forward * forwardOffsetScaled) +
                        (right * rightOffsetScaled) + (up * downOffsetScaled);
   position.y += state.camera.visualBobOffset;
   instance.position = position;

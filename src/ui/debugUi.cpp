@@ -63,6 +63,34 @@ void drawDebugUi(AppState &state) {
                       -2.0f, 2.0f);
   ImGui::SliderFloat3("Flashlight Beam Forward", &state.flashlightBeamForward.x,
                       -1.0f, 1.0f);
+  ImGui::Separator();
+  ImGui::SliderFloat("Hand Radio Offset Forward", &state.handRadioOffsetForward,
+                     -2.0f, 2.0f);
+  ImGui::SliderFloat("Hand Radio Offset Right", &state.handRadioOffsetRight,
+                     -2.0f, 2.0f);
+  ImGui::SliderFloat("Hand Radio Offset Down", &state.handRadioOffsetDown,
+                     -2.0f, 2.0f);
+  ImGui::SliderFloat("Hand Radio Yaw", &state.handRadioYawOffset, -180.0f,
+                     180.0f);
+  ImGui::SliderFloat("Hand Radio Pitch", &state.handRadioPitchOffset, -180.0f,
+                     180.0f);
+  ImGui::SliderFloat("Hand Radio Roll", &state.handRadioRollOffset, -180.0f,
+                     180.0f);
+  // Hand radio scale slider - updates instance scale directly
+  if (state.handRadioAssetIndex >= 0 && state.handRadioInstanceIndex >= 0 &&
+      state.handRadioInstanceIndex <
+          static_cast<int>(state.modelInstances.size())) {
+    ModelInstance &handRadioInstance =
+        state.modelInstances[state.handRadioInstanceIndex];
+    if (handRadioInstance.assetIndex == state.handRadioAssetIndex) {
+      float handRadioScale = handRadioInstance.scale.x;
+      if (ImGui::SliderFloat("Hand Radio Scale", &handRadioScale, 0.0001f,
+                             1.0f)) {
+        handRadioInstance.scale = glm::vec3(handRadioScale);
+        state.handRadioScale = handRadioScale;
+      }
+    }
+  }
   ImGui::SliderFloat("Fog", &state.fogDensity, 0.0f, 0.50f);
   if (ImGui::SliderFloat("Heightmap Scale", &state.heightmapScale, 0.0f,
                          50.0f)) {
@@ -183,7 +211,7 @@ void drawMapEditorUi(AppState &state) {
     auto getModelScale = [&](int assetIndex) -> glm::vec3 {
       // Since scale is baked into geometry via baseScale from model.json,
       // instances should use 1.0 by default
-      (void)assetIndex;  // Parameter unused but kept for consistency
+      (void)assetIndex; // Parameter unused but kept for consistency
       return glm::vec3(1.0f);
     };
 
